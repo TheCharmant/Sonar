@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/Login.css";
+import "../../styles/admin-login.css"; 
 
-const Login = ({ setUser }) => {
-  const [email, setEmail] = useState(""); // Empty by default
+
+const AdminLogin = ({ setUser }) => {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -12,8 +13,10 @@ const Login = ({ setUser }) => {
   const handleLogin = (e) => {
     e.preventDefault();
     if (email === "admin@example.com" && password === "password123") {
-      setUser({ email }); // Simulate login state
-      navigate("/dashboard"); // Redirect to Dashboard
+      const userData = { email };
+      setUser(userData);  
+      localStorage.setItem("user", JSON.stringify(userData)); // Save in localStorage
+      navigate("/admin-dashboard"); 
     } else {
       setError("Invalid credentials. Try again.");
     }
@@ -67,4 +70,4 @@ const Login = ({ setUser }) => {
   );
 };
 
-export default Login;
+export default AdminLogin;

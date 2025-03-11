@@ -1,41 +1,50 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import NewCommunication from "./pages/NewCommunication";
-import SearchFilters from "./pages/Search";
-import ReportsAnalysis from "./pages/Reports";
-import Notifications from "./pages/Notifications";
-import Settings from "./pages/Settings";
+import { useState, useEffect } from "react";
+import Login from "./pages/Admin/Admin-Login";
+import AdminDashboard from "./pages/Admin/admin-dashboard";
+import InboundMails from "./pages/Admin/inbound-mails";
+import AuditLogs from "./pages/Admin/audit-logs";
+import Reports from "./pages/Admin/Reports";
+import OutboundMails from "./pages/Admin/outbound-mails";
+import Settings from "./pages/Admin/Settings";
+import UserManagement from "./pages/Admin/user-management";
 import Sidebar from "./components/Sidebar";
 import "./index.css";
 
 function App() {
-  const [user, setUser] = useState(null); // Simulating auth state
+  const [user, setUser] = useState(null);
+
+  // Load user from localStorage on first render
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   return (
     <Router>
-      {user ? (
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-6">
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/new-communication" element={<NewCommunication />} />
-              <Route path="/search-filters" element={<SearchFilters />} />
-              <Route path="/reports-analysis" element={<ReportsAnalysis />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/dashboard" />} />
-            </Routes>
-          </main>
-        </div>
-      ) : (
-        <Routes>
-          <Route path="/" element={<Login setUser={setUser} />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      )}
+      <Routes>
+        {/* Public Routes (Login) */}
+        {!user ? (
+          <>
+            <Route path="/" element={<Login setUser={setUser} />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </>
+        ) : (
+          <>
+            {/* Admin Dashboard & Other Pages */}
+            <Route path="/admin-dashboard" element={<AdminDashboard setUser={setUser} />} />
+            <Route path="/inbound-mails" element={<InboundMails />} />
+            <Route path="/outbound-mails" element={<OutboundMails />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/admin-dashboard" />} />
+          </>
+        )}
+      </Routes>
     </Router>
   );
 }
