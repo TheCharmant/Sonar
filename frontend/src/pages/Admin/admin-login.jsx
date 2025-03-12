@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../../styles/admin-login.css"; 
-
+import "../../styles/admin-login.css";
 
 const AdminLogin = ({ setUser }) => {
   const [email, setEmail] = useState("");
@@ -14,9 +13,9 @@ const AdminLogin = ({ setUser }) => {
     e.preventDefault();
     if (email === "admin@example.com" && password === "password123") {
       const userData = { email };
-      setUser(userData);  
-      localStorage.setItem("user", JSON.stringify(userData)); // Save in localStorage
-      navigate("/admin-dashboard"); 
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      navigate("/admin-dashboard");
     } else {
       setError("Invalid credentials. Try again.");
     }
@@ -25,8 +24,17 @@ const AdminLogin = ({ setUser }) => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h2>Sign In</h2>
+        {/* Toggle Sign Up & Log In Buttons */}
+        <div className="toggle-buttons">
+          <button className="nav-btn signup-btn" onClick={() => navigate("/signup")}>Sign Up</button>
+          <button className="nav-btn active" onClick={() => navigate("/login")}>Log In</button>
+        </div>
+
+        {/* Added Log In text below buttons */}
+        <p className="toggle-text">Log In</p>
+
         {error && <p className="error-message">{error}</p>}
+        
         <form onSubmit={handleLogin}>
           <div className="input-group">
             <label>Email</label>
@@ -38,6 +46,7 @@ const AdminLogin = ({ setUser }) => {
               required
             />
           </div>
+
           <div className="input-group">
             <label>Password</label>
             <div className="password-wrapper">
@@ -57,14 +66,16 @@ const AdminLogin = ({ setUser }) => {
               </button>
             </div>
           </div>
-          <button type="submit" className="login-btn">Login</button>
+
+          <div className="remember-forgot">
+            <label>
+              <input type="checkbox" /> Remember me
+            </label>
+            <a href="#">Forgot password?</a>
+          </div>
+
+          <button type="submit" className="login-btn">Log me in</button>
         </form>
-        <p className="hint-text">
-          Use <strong>admin@example.com</strong> / <strong>password123</strong>
-        </p>
-        <p className="forgot-password">
-          <a href="#">Forgot Password?</a>
-        </p>
       </div>
     </div>
   );
