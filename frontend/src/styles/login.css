@@ -51,7 +51,7 @@
 /* Log In Button */
 .nav-btn.login-btn {
   background: white;
-  color: #CC65E8FF;
+  color: #7a2f9b;
 }
 
 .nav-btn.login-btn:hover {
@@ -60,21 +60,21 @@
 
 /* Sign Up Button */
 .nav-btn.signup-btn {
-  background: #CC65E8FF;
-  color: #FFFFFF;
+  background: #e3a7f9 !important;
+  color: white !important;
 }
 
 .nav-btn.signup-btn:hover {
-  background: #c67de5;
+  background: #D694f0;
 }
 
 /* Log In Title */
 .toggle-text {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 700;
   color: #171A1FFF;
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 /* Form */
@@ -171,7 +171,7 @@
 
 /* Login Button */
 .login-btn {
-  width: 50%;
+  width: 100%;
   padding: 12px;
   background: #e3a7f9;
   color: white;
@@ -184,7 +184,7 @@
 }
 
 .login-btn:hover {
-  background: #CC65E8FF;
+  background: #a145d9;
   transform: scale(1.02);
 }
 

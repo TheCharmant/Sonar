@@ -1,20 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import Login from "./pages/Admin/Admin-Login";
-import AdminDashboard from "./pages/Admin/admin-dashboard";
-import InboundMails from "./pages/Admin/inbound-mails";
-import AuditLogs from "./pages/Admin/audit-logs";
-import Reports from "./pages/Admin/Reports";
-import OutboundMails from "./pages/Admin/outbound-mails";
-import Settings from "./pages/Admin/Settings";
-import UserManagement from "./pages/Admin/user-management";
-import Sidebar from "./components/Sidebar";
-import "./index.css";
+import { useEffect, useState } from "react";
+import AdminLogin from "./pages/admin/login"; 
+import AdminDashboard from "./pages/admin/dashboard"; 
+import SignUp from "./pages/admin/sign-up"; 
 
-function App() {
+
+
+const App = () => {
   const [user, setUser] = useState(null);
 
-  // Load user from localStorage on first render
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -25,28 +19,17 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Routes (Login) */}
-        {!user ? (
-          <>
-            <Route path="/" element={<Login setUser={setUser} />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </>
-        ) : (
-          <>
-            {/* Admin Dashboard & Other Pages */}
-            <Route path="/admin-dashboard" element={<AdminDashboard setUser={setUser} />} />
-            <Route path="/inbound-mails" element={<InboundMails />} />
-            <Route path="/outbound-mails" element={<OutboundMails />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/audit-logs" element={<AuditLogs />} />
-            <Route path="/user-management" element={<UserManagement />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/admin-dashboard" />} />
-          </>
-        )}
+        {/* Redirect to login if no user */}
+        <Route path="/" element={user ? <Navigate to="/admin-dashboard" /> : <Navigate to="/login" />} />
+
+        <Route path="/login" element={<AdminLogin setUser={setUser} />} />
+        <Route path="/signup" element={<SignUp />} />
+        
+        {/* Protected Route - Only allow access if user exists */}
+        <Route path="/admin-dashboard" element={user ? <AdminDashboard user={user} /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;

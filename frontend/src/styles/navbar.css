@@ -1,0 +1,50 @@
+.navbar {
+  background-color: #CC65E880;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  color: white;
+  font-weight: bold;
+  justify-content: space-between;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 60px;
+  z-index: 1000;
+}
+
+.navbar .brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.navbar-content {
+  display: flex;
+  gap: 15px;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.navbar button {
+  background: white;
+  color: #CC65E8;
+  border: none;
+  padding: 8px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.navbar button:hover {
+  background: #ffffffcc;
+}
+
+body {
+  padding-left: 250px;
+  padding-top: 60px; /* Offset for navbar */
+}
