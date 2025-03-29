@@ -27,9 +27,3 @@ db.settings({ ignoreUndefinedProperties: true }); // ✅ Prevents Firestore erro
 
 // Initialize Firebase Auth
 export const auth = getAuth();
-
-<<<<<<< HEAD
-console.log("🔥 Firebase initialized!");
-=======
-console.log("🔥 Firebase Admin Initialized!");
->>>>>>> f4fc95d (email API integrated & report generation)
