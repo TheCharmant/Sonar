@@ -26,6 +26,12 @@ body {
   min-height: 100vh;
 }
 
+/* Remove this specific override since we're using the image directly */
+/* Auth pages background */
+.auth-container {
+  /* background: var(--background-gradient); */
+}
+
 .btn {
   padding: 10px 16px;
   border-radius: 4px;

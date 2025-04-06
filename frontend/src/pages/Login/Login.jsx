@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock } from "lucide-react"
-import backgroundImage from "../../assets/background.jpg"
 import "./Login.css"
 
 const Login = () => {
@@ -31,7 +30,7 @@ const Login = () => {
   }
 
   return (
-    <div className="auth-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
+    <div className="auth-container">
       <div className="auth-card">
         <div className="auth-tabs">
           <Link to="/signup" className="auth-tab">
@@ -74,13 +73,13 @@ const Login = () => {
                   required
                 />
                 <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
 
             <div className="form-options">
-              <div className="checkbox-container">
+              <label className="checkbox-container">
                 <input
                   type="checkbox"
                   id="rememberMe"
@@ -88,8 +87,9 @@ const Login = () => {
                   checked={formData.rememberMe}
                   onChange={handleChange}
                 />
-                <label htmlFor="rememberMe">Remember me</label>
-              </div>
+                <span className="custom-checkbox"></span>
+                Remember me
+              </label>
 
               <Link to="/forgot-password" className="forgot-password">
                 Forgot password?

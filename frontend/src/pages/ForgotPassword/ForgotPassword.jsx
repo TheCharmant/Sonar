@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Mail } from "lucide-react"
-import backgroundImage from "../../assets/background.jpg"
 import "./ForgotPassword.css"
 
 const ForgotPassword = () => {
@@ -21,7 +20,7 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="auth-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
+    <div className="auth-container">
       <div className="forgot-password-card">
         <h2>Forgot Password</h2>
         <p className="forgot-password-subtitle">Enter your email and we'll send you a link to reset your password.</p>

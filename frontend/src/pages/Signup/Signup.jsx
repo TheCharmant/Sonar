@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock, User, Building } from "lucide-react"
-import backgroundImage from "../../assets/background.jpg"
 import "./Signup.css"
 
 const Signup = () => {
@@ -32,7 +31,7 @@ const Signup = () => {
   }
 
   return (
-    <div className="auth-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
+    <div className="auth-container">
       <div className="auth-card">
         <div className="auth-tabs">
           <Link to="/signup" className="auth-tab active">
@@ -88,7 +87,7 @@ const Signup = () => {
                   required
                 />
                 <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
@@ -102,14 +101,12 @@ const Signup = () => {
                   </option>
                   <option value="admin">Admin</option>
                   <option value="manager">Manager</option>
-                  <option value="employee">Employee</option>
-                  <option value="auditor">Auditor</option>
                 </select>
               </div>
             </div>
 
             <div className="form-options">
-              <div className="checkbox-container">
+              <label className="checkbox-container">
                 <input
                   type="checkbox"
                   id="agreeTerms"
@@ -118,8 +115,8 @@ const Signup = () => {
                   onChange={handleChange}
                   required
                 />
-                <label htmlFor="agreeTerms">I agree with Terms & Conditions</label>
-              </div>
+                <span className="custom-checkbox"></span>I agree with Terms & Conditions
+              </label>
             </div>
 
             <button type="submit" className="auth-button">
