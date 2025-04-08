@@ -1,20 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { Outlet, Link, useLocation } from "react-router-dom"
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
 import {
   LayoutGrid,
-  MailIcon as MailIn,
-  MailIcon as MailOut,
+  ArrowDownLeft,
+  ArrowUpRight,
   BarChart2,
   ClipboardList,
   Users,
   SettingsIcon,
+  LogOut,
 } from "lucide-react"
 import "./Layout.css"
 
 const Layout = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const [user] = useState({
     name: "Powerpuff Cuties",
     email: "powerpuffs@gmail.com",
@@ -61,12 +63,12 @@ const Layout = () => {
           </Link>
 
           <Link to="/inbound-mails" className={`nav-item ${isActive("/inbound-mails")}`}>
-            <MailIn size={20} />
+            <ArrowDownLeft size={20} />
             <span>Inbound Mails</span>
           </Link>
 
           <Link to="/outbound-mails" className={`nav-item ${isActive("/outbound-mails")}`}>
-            <MailOut size={20} />
+            <ArrowUpRight size={20} />
             <span>Outbound Mails</span>
           </Link>
 
@@ -106,7 +108,16 @@ const Layout = () => {
         <div className="top-nav">
           <div className="top-nav-title">{getPageTitle()}</div>
           <div className="top-nav-actions">
-            {location.pathname === "/dashboard" && <button className="btn btn-primary">GENERATE REPORT</button>}
+            <button
+              className="logout-button"
+              onClick={() => {
+                localStorage.removeItem("isAuthenticated")
+                navigate("/login")
+              }}
+            >
+              <LogOut size={18} />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
         <Outlet />

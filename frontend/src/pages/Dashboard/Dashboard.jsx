@@ -46,13 +46,15 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
+      <button className="generate-report-button">GENERATE REPORT</button>
+
       <div className="stats-container">
-        <div className="stat-card total">
+        <div className="stat-card">
           <h3>Total Emails</h3>
           <div className="stat-value">300</div>
         </div>
 
-        <div className="stat-card read">
+        <div className="stat-card">
           <h3>Read</h3>
           <div className="stat-value">12</div>
           <Link to="/inbound-mails" className="see-all">
@@ -60,7 +62,7 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        <div className="stat-card unread">
+        <div className="stat-card">
           <h3>Unread</h3>
           <div className="stat-value">283</div>
           <Link to="/inbound-mails" className="see-all">
