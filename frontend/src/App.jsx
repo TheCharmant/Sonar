@@ -1,11 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-<<<<<<< HEAD
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // Keep this import
 import AdminLogin from "./pages/admin/login"; 
 import AdminDashboard from "./pages/admin/dashboard"; 
 import SignUp from "./pages/admin/sign-up"; 
-=======
-import { useState } from "react";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -16,9 +13,6 @@ import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Sidebar from "./components/Sidebar";
 import "./index.css";
->>>>>>> f4fc95d (email API integrated & report generation)
-
-
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -32,7 +26,6 @@ const App = () => {
 
   return (
     <Router>
-<<<<<<< HEAD
       <Routes>
         {/* Redirect to login if no user */}
         <Route path="/" element={user ? <Navigate to="/admin-dashboard" /> : <Navigate to="/login" />} />
@@ -43,7 +36,6 @@ const App = () => {
         {/* Protected Route - Only allow access if user exists */}
         <Route path="/admin-dashboard" element={user ? <AdminDashboard user={user} /> : <Navigate to="/login" />} />
       </Routes>
-=======
       {user ? (
         <div className="flex">
           <Sidebar />
@@ -66,7 +58,6 @@ const App = () => {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       )}
->>>>>>> f4fc95d (email API integrated & report generation)
     </Router>
   );
 };
