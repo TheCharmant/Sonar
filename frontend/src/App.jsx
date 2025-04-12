@@ -1,11 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react"; // Keep this import
-import AdminLogin from "./pages/admin/login"; 
+import { useEffect, useState } from "react";
+import AdminLogin from "./pages/Admin/login";
 import AdminDashboard from "./pages/admin/dashboard"; 
-import SignUp from "./pages/admin/sign-up"; 
 import Signup from "./pages/Signup";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Admin/login";
 import NewCommunication from "./pages/NewCommunication";
 import SearchFilters from "./pages/Search";
 import ReportsAnalysis from "./pages/Reports";
@@ -27,37 +25,48 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        {/* Redirect to login if no user */}
         <Route path="/" element={user ? <Navigate to="/admin-dashboard" /> : <Navigate to="/login" />} />
-
-        <Route path="/login" element={<AdminLogin setUser={setUser} />} />
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login setUser={setUser} />} />
+        <Route path="/signup" element={<Signup setUser={setUser} />} />
+        <Route path="/admin-login" element={<AdminLogin setUser={setUser} />} />
         
-        {/* Protected Route - Only allow access if user exists */}
-        <Route path="/admin-dashboard" element={user ? <AdminDashboard user={user} /> : <Navigate to="/login" />} />
+        <Route
+          path="/admin-dashboard"
+          element={user ? (
+            <div className="flex">
+              <Sidebar />
+              <main className="flex-1 p-6">
+                <AdminDashboard user={user} />
+              </main>
+            </div>
+          ) : (
+            <Navigate to="/login" />
+          )}
+        />
+        {/* Nested inside admin layout */}
+        {user && (
+          <>
+            <Route
+              path="/dashboard"
+              element={
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 p-6">
+                    <Dashboard />
+                  </main>
+                </div>
+              }
+            />
+            <Route path="/new-communication" element={<NewCommunication />} />
+            <Route path="/search-filters" element={<SearchFilters />} />
+            <Route path="/reports-analysis" element={<ReportsAnalysis />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/settings" element={<Settings />} />
+          </>
+        )}
+
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-      {user ? (
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-6">
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/new-communication" element={<NewCommunication />} />
-              <Route path="/search-filters" element={<SearchFilters />} />
-              <Route path="/reports-analysis" element={<ReportsAnalysis />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/dashboard" />} />
-            </Routes>
-          </main>
-        </div>
-      ) : (
-        <Routes>
-          <Route path="/" element={<Login setUser={setUser} />} />
-          <Route path="/" element={<Signup setUser={setUser} />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      )}
     </Router>
   );
 };

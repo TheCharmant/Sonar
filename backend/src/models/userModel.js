@@ -1,6 +1,11 @@
 import { db } from "../config/firebase.js";
+import admin from "firebase-admin";
+
+const usersRef = db.collection("users");
 
 const usersCollection = db.collection("users");
+
+export default usersRef;
 
 export const createUser = async (uid, email, fullName) => {
     const userData = {
