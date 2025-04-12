@@ -2,6 +2,7 @@ import { auth } from "../config/firebase.js";
 import { createUser, getUserById } from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import admin from "firebase-admin";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ export const getOAuthTokens = async (uid) => {
     }
 };
 
+
 // ✅ Signup
 export const signup = async (req, res) => {
     try {
@@ -38,6 +40,12 @@ export const signup = async (req, res) => {
         const { email, password, fullName } = req.body;
         if (!email || !password || !fullName) 
             return res.status(400).json({ success: false, error: "All fields are required!" });
+
+        // ✅ Check if email is a Gmail address
+        const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        if (!gmailRegex.test(email)) {
+            return res.status(400).json({ success: false, error: "Only Gmail addresses are allowed." });
+        }
 
         const userRecord = await auth.createUser({ email, password });
         const newUser = await createUser(userRecord.uid, email, fullName);
@@ -49,6 +57,7 @@ export const signup = async (req, res) => {
         res.status(400).json({ success: false, error: error.message });
     }
 };
+
 
 
 // ✅ Login

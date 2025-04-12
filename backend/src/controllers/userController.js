@@ -1,9 +1,16 @@
 import usersRef from "../models/userModel.js";
 
-// CREATE - This is optional if you're using Firebase Auth registration
+// ✅ Helper: Gmail-only email validation
+const isValidGmail = (email) => /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
+
+// ✅ CREATE - Only allow @gmail.com
 const createUser = async (req, res) => {
   try {
     const { name, email, role = "user", status = "active" } = req.body;
+
+    if (!isValidGmail(email)) {
+      return res.status(400).json({ error: "Only Gmail addresses are allowed." });
+    }
 
     const newUser = { name, email, role, status, createdAt: new Date().toISOString() };
     const docRef = await usersRef.add(newUser);
@@ -14,7 +21,7 @@ const createUser = async (req, res) => {
   }
 };
 
-// READ - Get all users (excluding soft-deleted)
+// ✅ READ - Get all users (excluding soft-deleted)
 const getAllUsers = async (req, res) => {
   try {
     const snapshot = await usersRef.where("status", "!=", "deleted").get();
@@ -26,7 +33,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// READ - Single user
+// ✅ READ - Single user
 const getUserById = async (req, res) => {
   try {
     const doc = await usersRef.doc(req.params.id).get();
@@ -38,9 +45,15 @@ const getUserById = async (req, res) => {
   }
 };
 
-// UPDATE - Edit user info
+// ✅ UPDATE - Only allow @gmail.com if email is updated
 const updateUser = async (req, res) => {
   try {
+    const { email } = req.body;
+
+    if (email && !isValidGmail(email)) {
+      return res.status(400).json({ error: "Only Gmail addresses are allowed." });
+    }
+
     await usersRef.doc(req.params.id).update(req.body);
     res.status(200).json({ message: "User updated" });
   } catch (err) {
@@ -48,7 +61,7 @@ const updateUser = async (req, res) => {
   }
 };
 
-// DELETE (Soft) - Mark user as inactive/deleted
+// ✅ DELETE (Soft)
 const softDeleteUser = async (req, res) => {
   try {
     await usersRef.doc(req.params.id).update({ status: "deleted" });
@@ -58,7 +71,7 @@ const softDeleteUser = async (req, res) => {
   }
 };
 
-// ACTIVATE - Reactivate user
+// ✅ ACTIVATE
 const activateUser = async (req, res) => {
   try {
     await usersRef.doc(req.params.id).update({ status: "active" });
@@ -68,7 +81,7 @@ const activateUser = async (req, res) => {
   }
 };
 
-// CHANGE ROLE
+// ✅ CHANGE ROLE
 const changeUserRole = async (req, res) => {
   try {
     const { role } = req.body;
