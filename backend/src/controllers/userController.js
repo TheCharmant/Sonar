@@ -3,16 +3,33 @@ import usersRef from "../models/userModel.js";
 // ✅ Helper: Gmail-only email validation
 const isValidGmail = (email) => /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
 
-// ✅ CREATE - Only allow @gmail.com
+// ✅ CREATE - Only allow @gmail.com and ensure email is unique
 const createUser = async (req, res) => {
   try {
     const { name, email, role = "user", status = "active" } = req.body;
 
+    if (!email || !name) {
+      return res.status(400).json({ error: "Name and email are required." });
+    }
+
+    // Check for Gmail format
     if (!isValidGmail(email)) {
       return res.status(400).json({ error: "Only Gmail addresses are allowed." });
     }
 
-    const newUser = { name, email, role, status, createdAt: new Date().toISOString() };
+    // Check if email already exists
+    const snapshot = await usersRef.where("email", "==", email).get();
+    if (!snapshot.empty) {
+      return res.status(400).json({ error: "Email already exists." });
+    }
+
+    const newUser = {
+      name,
+      email,
+      role,
+      status,
+      createdAt: new Date().toISOString(),
+    };
     const docRef = await usersRef.add(newUser);
 
     res.status(201).json({ id: docRef.id, ...newUser });
@@ -21,7 +38,6 @@ const createUser = async (req, res) => {
   }
 };
 
-// ✅ READ - Get all users (excluding soft-deleted)
 const getAllUsers = async (req, res) => {
   try {
     const snapshot = await usersRef.where("status", "!=", "deleted").get();
@@ -32,6 +48,7 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // ✅ READ - Single user
 const getUserById = async (req, res) => {
