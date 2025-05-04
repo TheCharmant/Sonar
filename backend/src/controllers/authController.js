@@ -2,8 +2,11 @@ import { auth } from "../config/firebase.js";
 import { createUser, getUserById } from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { getAuthUrl } from "../config/oauth.js";  // Add this import
+
 
 dotenv.config();
+
 
 const generateToken = (uid) => {
     return jwt.sign({ uid }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -54,19 +57,35 @@ export const signup = async (req, res) => {
 // ✅ Login
 export const login = async (req, res) => {
     try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ success: false, error: "Email is required!" });
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, error: "Email and password are required!" });
+        }
 
         const userRecord = await auth.getUserByEmail(email);
-        const userData = await getUserById(userRecord.uid);
-        if (!userData) return res.status(400).json({ success: false, error: "User not found in database" });
+        if (!userRecord) {
+            return res.status(400).json({ success: false, error: "User not found" });
+        }
 
+        // ✅ Generate JWT
         const token = generateToken(userRecord.uid);
-        res.status(200).json({ success: true, user: userData, token, message: "Login successful!" });
+
+        // ✅ Pass JWT as `state` param to Google OAuth
+        const googleAuthUrl = getAuthUrl(token);  // Move it here
+
+        res.status(200).json({
+            success: true,
+            message: "Login successful, please connect your Gmail!",
+            token,
+            googleAuthUrl
+        });
     } catch (error) {
+        console.error("Login Error:", error);
         res.status(400).json({ success: false, error: error.message });
     }
 };
+
+
 
 // ✅ Get Current User Profile
 export const getProfile = async (req, res) => {
