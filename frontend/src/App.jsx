@@ -1,74 +1,45 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-<<<<<<< HEAD
-import { useEffect, useState } from "react";
-import AdminLogin from "./pages/admin/login"; 
-import AdminDashboard from "./pages/admin/dashboard"; 
-import SignUp from "./pages/admin/sign-up"; 
-=======
-import { useState } from "react";
-import Signup from "./pages/Signup";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import NewCommunication from "./pages/NewCommunication";
-import SearchFilters from "./pages/Search";
-import ReportsAnalysis from "./pages/Reports";
-import Notifications from "./pages/Notifications";
-import Settings from "./pages/Settings";
-import Sidebar from "./components/Sidebar";
-import "./index.css";
->>>>>>> f4fc95d (email API integrated & report generation)
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import Login from "./pages/Login/Login"
+import Signup from "./pages/Signup/Signup"
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword"
+import Dashboard from "./pages/Dashboard/Dashboard"
+import InboundMails from "./pages/InboundMails/InboundMails"
+import OutboundMails from "./pages/OutboundMails/OutboundMails"
+import Reports from "./pages/Reports/Reports"
+import AuditLogs from "./pages/AuditLogs/AuditLogs"
+import UserManagement from "./pages/UserManagement/UserManagement"
+import Settings from "./pages/Settings/Settings"
+import AddUser from "./pages/AddUser/AddUser"
+import Layout from "./components/Layout/Layout"
+import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute"
+import "./App.css"
 
-
-
-const App = () => {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
+function App() {
   return (
     <Router>
-<<<<<<< HEAD
       <Routes>
-        {/* Redirect to login if no user */}
-        <Route path="/" element={user ? <Navigate to="/admin-dashboard" /> : <Navigate to="/login" />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route path="/login" element={<AdminLogin setUser={setUser} />} />
-        <Route path="/signup" element={<SignUp />} />
-        
-        {/* Protected Route - Only allow access if user exists */}
-        <Route path="/admin-dashboard" element={user ? <AdminDashboard user={user} /> : <Navigate to="/login" />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/inbound-mails" element={<InboundMails />} />
+            <Route path="/outbound-mails" element={<OutboundMails />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/add-user" element={<AddUser />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-=======
-      {user ? (
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-6">
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/new-communication" element={<NewCommunication />} />
-              <Route path="/search-filters" element={<SearchFilters />} />
-              <Route path="/reports-analysis" element={<ReportsAnalysis />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/dashboard" />} />
-            </Routes>
-          </main>
-        </div>
-      ) : (
-        <Routes>
-          <Route path="/" element={<Login setUser={setUser} />} />
-          <Route path="/" element={<Signup setUser={setUser} />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      )}
->>>>>>> f4fc95d (email API integrated & report generation)
     </Router>
-  );
-};
+  )
+}
 
-export default App;
+export default App
+
