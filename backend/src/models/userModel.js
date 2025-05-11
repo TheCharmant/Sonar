@@ -7,18 +7,14 @@ const usersCollection = db.collection("users");
 
 export default usersRef;
 
-export const createUser = async (uid, email, fullName) => {
-    const userData = {
-        uid,
-        email,
-        fullName,
-        createdAt: new Date(),
-    };
-    await usersCollection.doc(uid).set(userData);
-    return userData;
+
+export const createUser = async (uid, email, name) => {
+  const userRef = db.collection("users").doc(uid);
+  await userRef.set({ email, name });
+  return { uid, email, name };
 };
 
 export const getUserById = async (uid) => {
-    const userDoc = await usersCollection.doc(uid).get();
-    return userDoc.exists ? userDoc.data() : null;
+  const doc = await db.collection("users").doc(uid).get();
+  return doc.exists ? doc.data() : null;
 };
