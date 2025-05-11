@@ -753,8 +753,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
                   className={`border-b py-2 px-3 hover:bg-gray-100 cursor-pointer ${
                     selectedEmailContent && email.id === selectedEmailContent.id ? 'bg-blue-50' : ''
                   }`}
-                  onClick={() => fetchFullEmail(email.id)}
-                >
+                  onClick={() => fetchFullEmail(email.id)}>
                   <div className="flex items-start">
                     <div className="flex-grow">
                       <div className="flex justify-between">
@@ -799,8 +798,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
                   onSelectEmail(selectedEmailContent);
                 }
               }}
-              className="p-2 text-gray-500 flex items-center"
-            >
+              className="p-2 text-gray-500 flex items-center">
               <span>View Full Email</span>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -808,8 +806,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
             </button>
             <button
               onClick={closeModal}
-              className="p-2 text-gray-500"
-            >
+              className="p-2 text-gray-500">
               Close
             </button>
           </div>
