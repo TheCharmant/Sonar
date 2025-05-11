@@ -1,0 +1,125 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden; /* Prevents unwanted horizontal scrolling */
+}
+
+.dashboard {
+  display: flex;
+  background: #f8f9fa;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Ensures it covers the full page */
+  width: 100vw;
+  padding: 25px;
+  overflow: hidden;
+}
+
+.dashboard-content {
+  width: 99%; /* Increased width for full page coverage */
+  max-width: 1700px; /* Expanded max width */
+  flex-grow: 1;
+  height: auto;
+  min-height: 85vh;
+  padding: 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0px 12px 25px rgba(23, 26, 31, 0.2), 0px 0px 3px rgba(23, 26, 31, 0.1);
+}
+
+.top-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #e6b9ff;
+  padding: 18px;
+  border-radius: 10px;
+  margin-bottom: 25px;
+}
+
+.top-section h2 {
+  font-size: 1.8rem;
+  color: #333;
+}
+
+.buttons .btn {
+  padding: 10px 16px;
+  font-size: 1rem;
+  margin-left: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 5px;
+}
+
+.btn.primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn.secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.stats-cards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.card {
+  flex: 1;
+  min-width: 320px;
+  height: 140px;
+  padding: 20px;
+  background: #f3e6ff;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.card h1 {
+  font-size: 3rem;
+  color: #333;
+}
+
+.card a {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.logs-section {
+  margin-top: 20px;
+}
+
+.logs-section table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.logs-section th,
+.logs-section td {
+  padding: 10px;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.logs-section th {
+  background: #f3e6ff;
+  color: #333;
+}

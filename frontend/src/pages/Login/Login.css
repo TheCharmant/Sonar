@@ -1,0 +1,197 @@
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: url("../../assets/background.jpg");
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+.auth-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 480px; /* Increased width for better balance */
+  overflow: hidden;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.auth-tab {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  color: #555;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.auth-tab.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.auth-form-container {
+  padding: 24px 32px; /* Increased padding for the wider container */
+}
+
+.auth-form-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 16px;
+  position: relative; /* Added to ensure proper positioning of elements */
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon svg {
+  position: absolute;
+  left: 12px;
+  color: #777;
+  z-index: 1;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  padding-right: 45px; /* Increased right padding to make more room for the eye icon */
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: #f5f5f5;
+}
+
+.input-with-icon input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* Updated password toggle to be properly inside the input field with more space */
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #777;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  height: 24px;
+  width: 24px;
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Completely redesigned checkbox for better visibility and functionality */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-left: 28px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-container input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+  z-index: 1; /* Ensure it's clickable */
+}
+
+.custom-checkbox {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 18px;
+  width: 18px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  pointer-events: none; /* Ensure clicks pass through to the input */
+}
+
+.checkbox-container input[type="checkbox"]:checked ~ .custom-checkbox {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.custom-checkbox:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.checkbox-container input[type="checkbox"]:checked ~ .custom-checkbox:after {
+  display: block;
+}
+
+.checkbox-container label {
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 0;
+}
+
+.forgot-password {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.auth-button {
+  width: 100%;
+  padding: 10px;
+  background-color: #cc65e8ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.auth-button:hover {
+  background-color: #b44ecc;
+}
+
