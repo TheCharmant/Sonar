@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream:frontend/src/App.jsx
 import { useEffect, useState } from "react";
 import AdminLogin from "./pages/Admin/login";
@@ -89,6 +90,8 @@ import Layout from "./components/Layout/Layout"
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute"
 import "./App.css"
 =======
+=======
+>>>>>>> Stashed changes
 import Login from "./pages/Login/Login";
 import Signup from "./pages/Signup/Signup";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
@@ -103,7 +106,10 @@ import AddUser from "./pages/AddUser/AddUser";
 import Layout from "./components/Layout/Layout";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import "./App.css";
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes:admin/src/App.jsx
+=======
+>>>>>>> Stashed changes
 
 function App() {
   return (
@@ -132,9 +138,13 @@ function App() {
   );
 }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream:frontend/src/App.jsx
 
 
 =======
 export default App;
 >>>>>>> Stashed changes:admin/src/App.jsx
+=======
+export default App;
+>>>>>>> Stashed changes
