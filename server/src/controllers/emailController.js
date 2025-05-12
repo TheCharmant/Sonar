@@ -122,3 +122,49 @@ export const fetchEmails = async (req, res) => {
     res.status(500).json({ error: "Error fetching emails" });
   }
 };
+
+// Controller: /admin/email/all
+export const fetchAllEmailsForAdmin = async (req, res) => {
+  try {
+    const tokenDocs = await db.collection("oauth_tokens").listDocuments();
+    const results = [];
+
+    for (const docRef of tokenDocs) {
+      const uid = docRef.id;
+      const tokenSnap = await docRef.get();
+      const tokenData = tokenSnap.data();
+
+      if (!tokenData?.access_token) continue;
+
+      const auth = new google.auth.OAuth2();
+      auth.setCredentials({ access_token: tokenData.access_token });
+
+      const gmail = google.gmail({ version: 'v1', auth });
+
+      const fetchForFolder = async (folder) => {
+        try {
+          const { messages } = await fetchMessagesFromFolder(gmail, folder, 10); // Limit per user/folder
+          const metadata = await Promise.all(messages.map((msg) => fetchEmailMetadata(gmail, msg.id)));
+          return metadata;
+        } catch (err) {
+          console.warn(`Failed to fetch for UID ${uid} in folder ${folder}:`, err.message);
+          return [];
+        }
+      };
+
+      const inboxEmails = await fetchForFolder("INBOX");
+      const sentEmails = await fetchForFolder("SENT");
+
+      results.push({
+        uid,
+        inbox: inboxEmails,
+        sent: sentEmails,
+      });
+    }
+
+    res.json({ users: results });
+  } catch (error) {
+    console.error("Admin email fetch failed:", error);
+    res.status(500).json({ error: "Failed to fetch emails for all users" });
+  }
+};

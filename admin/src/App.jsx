@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+<<<<<<< Updated upstream:frontend/src/App.jsx
 import { useEffect, useState } from "react";
 import AdminLogin from "./pages/Admin/login";
 import AdminDashboard from "./pages/admin/dashboard"; 
@@ -87,6 +88,22 @@ import AddUser from "./pages/AddUser/AddUser"
 import Layout from "./components/Layout/Layout"
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute"
 import "./App.css"
+=======
+import Login from "./pages/Login/Login";
+import Signup from "./pages/Signup/Signup";
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import InboundMails from "./pages/InboundMails/InboundMails";
+import OutboundMails from "./pages/OutboundMails/OutboundMails";
+import Reports from "./pages/Reports/Reports";
+import AuditLogs from "./pages/AuditLogs/AuditLogs";
+import UserManagement from "./pages/UserManagement/UserManagement";
+import Settings from "./pages/Settings/Settings";
+import AddUser from "./pages/AddUser/AddUser";
+import Layout from "./components/Layout/Layout";
+import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+import "./App.css";
+>>>>>>> Stashed changes:admin/src/App.jsx
 
 function App() {
   return (
@@ -112,8 +129,12 @@ function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
-  )
+  );
 }
 
+<<<<<<< Updated upstream:frontend/src/App.jsx
 
 
+=======
+export default App;
+>>>>>>> Stashed changes:admin/src/App.jsx

@@ -4,6 +4,9 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock } from "lucide-react"
 import "./Login.css"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "../../firebase"
+
 
 const Login = () => {
   const navigate = useNavigate()
@@ -22,11 +25,34 @@ const Login = () => {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // In a real app, you would validate and authenticate here
-    localStorage.setItem("isAuthenticated", "true")
-    navigate("/dashboard")
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
+      const user = userCredential.user
+      const idToken = await user.getIdToken()
+
+      // Send token to your backend for verification and get custom JWT
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token: idToken }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Login failed")
+
+      // Store JWT (optional: in localStorage or cookies)
+      localStorage.setItem("adminToken", data.token)
+
+      navigate("/dashboard")
+    } catch (err) {
+      console.error("Login failed", err)
+      alert(err.message)
+    }
   }
 
   return (
@@ -107,4 +133,3 @@ const Login = () => {
 }
 
 export default Login
-

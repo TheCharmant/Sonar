@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors'; // Add cors
 import authRoutes from './routes/authRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
+import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 
 dotenv.config(); // Load environment variables
 
@@ -24,5 +25,6 @@ app.use(cookieParser()); // Parse cookies
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/email', emailRoutes);
+app.use("/api/admin", adminAuthRoutes);
 
 export default app;
