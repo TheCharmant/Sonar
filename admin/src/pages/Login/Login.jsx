@@ -6,9 +6,11 @@ import { Eye, EyeOff, Mail, Lock } from "lucide-react"
 import "./Login.css"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "../../firebase"
+import { useAuth } from "../../AuthContext";
 
 
 const Login = () => {
+  const { setToken, setRole } = useAuth();
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: "",
@@ -26,34 +28,38 @@ const Login = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+  e.preventDefault();
 
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password)
-      const user = userCredential.user
-      const idToken = await user.getIdToken()
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+    const user = userCredential.user;
+    const idToken = await user.getIdToken();
 
-      // Send token to your backend for verification and get custom JWT
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token: idToken }),
-      })
+    // Send token to backend
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token: idToken }),
+    });
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Login failed")
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Login failed");
 
-      // Store JWT (optional: in localStorage or cookies)
-      localStorage.setItem("adminToken", data.token)
+    // ✅ Store JWT in localStorage (optional) and context
+    localStorage.setItem("adminToken", data.token);
+    localStorage.setItem("adminRole", data.role); // ✅ important for refresh
+    setToken(data.token);
+    setRole(data.role);
 
-      navigate("/dashboard")
-    } catch (err) {
-      console.error("Login failed", err)
-      alert(err.message)
-    }
+    navigate("/dashboard");
+  } catch (err) {
+    console.error("Login failed", err);
+    alert(err.message);
   }
+};
+
 
   return (
     <div className="auth-container">

@@ -9,29 +9,26 @@ const generateToken = (uid, role) => {
 
 // 🔐 Email/password admin login
 export const adminLogin = async (req, res) => {
-  const { token } = req.body;  // Expecting the Firebase ID token sent from client-side
-
+  const { token } = req.body;
   if (!token) return res.status(400).json({ error: "Missing Firebase ID token" });
 
   try {
-    // Verify Firebase ID token
     const decodedToken = await auth.verifyIdToken(token);
     const { uid } = decodedToken;
 
-    // Check if this user exists in the 'admins' collection
     const adminDoc = await db.collection("admins").doc(uid).get();
     if (!adminDoc.exists) return res.status(403).json({ error: "Not an admin" });
 
-    // Generate JWT for the admin
     const adminToken = generateToken(uid, "admin");
 
-    // Send back the JWT
-    return res.json({ token: adminToken });
+    // ✅ FIX: Add role to response
+    return res.json({ token: adminToken, role: "admin" });
   } catch (err) {
     console.error("Admin login failed:", err);
     return res.status(401).json({ error: "Invalid login or token" });
   }
 };
+
 
 
 

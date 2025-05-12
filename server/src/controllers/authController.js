@@ -74,8 +74,11 @@ export const oauthCallback = async (req, res) => {
     const newToken = generateToken(uid);
   
     console.log("Redirecting to frontend...");
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${newToken}`);
-  } catch (err) {
+    const frontendUrls = process.env.FRONTEND_URLS?.split(',') ?? [];
+const redirectUrl = frontendUrls[0]; // You can tweak this if you support multiple frontends
+res.redirect(`${redirectUrl}/dashboard?token=${newToken}`);
+
+} catch (err) {
     console.error("OAuth callback failed:", err); // Add this as a final fallback
     return res.status(500).json({ error: "OAuth callback error" });
   }

@@ -1,37 +1,46 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from './firebase'; // Import Firebase auth
-import { onAuthStateChanged } from 'firebase/auth';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { auth } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
-// Create a context for Auth
 const AuthContext = createContext();
 
-// AuthProvider component that will wrap the app
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(true); // 👈 track auth loading
 
   useEffect(() => {
-    console.log("✅ AuthProvider mounted");
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+      if (firebaseUser) {
+        const storedToken = localStorage.getItem("adminToken");
+        const storedRole = localStorage.getItem("adminRole");
+
+        if (storedToken) setToken(storedToken);
+        if (storedRole) setRole(storedRole);
+      } else {
+        setToken(null);
+        setRole(null);
+      }
+
+      setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user }}>
+    <AuthContext.Provider value={{ user, token, setToken, role, setRole, loading }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-
-// Custom hook to use auth state
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    console.error("❌ useAuth called outside of AuthProvider");
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
