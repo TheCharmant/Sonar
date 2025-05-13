@@ -48,6 +48,44 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedEmailContent, setSelectedEmailContent] = useState<EmailContent | null>(null);
+  const [labels, setLabels] = useState<Label[]>([]);
+
+  // Add interface for Label
+  interface Label {
+    id: string;
+    name: string;
+    type: 'system' | 'user';
+    messageListVisibility?: string;
+    labelListVisibility?: string;
+    color?: {
+      textColor: string;
+      backgroundColor: string;
+    } | null;
+  }
+
+  // Fetch labels when component mounts
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchLabels = async () => {
+      try {
+        const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/labels`);
+        
+        const res = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (!res.ok) throw new Error("Failed to load labels");
+        
+        const data = await res.json();
+        setLabels(data.labels);
+      } catch (err) {
+        console.error("Error fetching labels:", err);
+      }
+    };
+    
+    fetchLabels();
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -56,6 +94,13 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
       try {
         const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
         url.searchParams.set("folder", folder.toUpperCase());
+        
+        // Add label parameter if selected
+        const selectedLabel = new URLSearchParams(window.location.search).get('label');
+        
+        if (selectedLabel) {
+          url.searchParams.set("label", selectedLabel);
+        }
 
         const res = await fetch(url.toString(), {
           headers: { Authorization: `Bearer ${token}` },
@@ -851,3 +896,4 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
 };
 
 export default EmailList;
+

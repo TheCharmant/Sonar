@@ -10,10 +10,31 @@ export const getAuthUrl = async (uid: string) => {
   return data.url;
 };
 
-export const fetchEmails = async (token: string) => {
-  const res = await fetch(`${BASE_URL}/email/fetch`, {
+export const fetchEmails = async (token: string, folder: string = 'INBOX', label?: string, pageToken?: string) => {
+  let url = `${BASE_URL}/email/fetch?folder=${folder}`;
+  
+  if (label) {
+    url += `&label=${label}`;
+  }
+  
+  if (pageToken) {
+    url += `&pageToken=${pageToken}`;
+  }
+  
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  
   if (!res.ok) throw new Error("Failed to fetch emails");
   return res.json();
 };
+
+export const fetchGmailLabels = async (token: string) => {
+  const res = await fetch(`${BASE_URL}/email/labels`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  
+  if (!res.ok) throw new Error("Failed to fetch Gmail labels");
+  return res.json();
+};
+
