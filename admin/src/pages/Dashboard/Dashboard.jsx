@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { X, ChevronDown, Filter } from 'react-feather';
+import { X, ChevronDown, Filter, Search } from 'react-feather';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -31,7 +31,8 @@ const Dashboard = () => {
   
   // Add filters similar to AdminEmailList
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilters, setStatusFilters] = useState([]);
+  const [directionFilters, setDirectionFilters] = useState([]);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
   const [showFilters, setShowFilters] = useState(false);
@@ -242,14 +243,26 @@ const Dashboard = () => {
   };
 
   // Filter handling functions
-  const handleStatusSelect = (status) => {
-    setStatusFilter(status);
-    setShowStatusDropdown(false);
+  const toggleStatusFilter = (status) => {
+    if (statusFilters.includes(status)) {
+      setStatusFilters(statusFilters.filter(s => s !== status));
+    } else {
+      setStatusFilters([...statusFilters, status]);
+    }
+  };
+
+  const toggleDirectionFilter = (direction) => {
+    if (directionFilters.includes(direction)) {
+      setDirectionFilters(directionFilters.filter(d => d !== direction));
+    } else {
+      setDirectionFilters([...directionFilters, direction]);
+    }
   };
 
   const resetFilters = () => {
     setSearchTerm("");
-    setStatusFilter("");
+    setStatusFilters([]);
+    setDirectionFilters([]);
     setDateRange({ start: null, end: null });
   };
 
@@ -266,9 +279,14 @@ const Dashboard = () => {
       );
     }
     
-    // Apply status filter
-    if (statusFilter) {
-      filtered = filtered.filter(email => email.status === statusFilter);
+    // Apply status filters
+    if (statusFilters.length > 0) {
+      filtered = filtered.filter(email => statusFilters.includes(email.status));
+    }
+    
+    // Apply direction filters
+    if (directionFilters.length > 0) {
+      filtered = filtered.filter(email => directionFilters.includes(email.direction));
     }
     
     // Apply date range filter
@@ -284,14 +302,19 @@ const Dashboard = () => {
 
   const filteredEmails = getFilteredEmails();
 
+  if (loading) return (
+    <div className="loading-container">
+      <div className="loading-spinner-container">
+        <div className="loading-spinner"></div>
+        <p>Loading dashboard data...</p>
+      </div>
+    </div>
+  );
+  if (error) return <p className="p-4 text-red-500">{error}</p>;
+
   return (
     <div className="dashboard-container">
-      {loading ? (
-        <p>Loading dashboard data...</p>
-      ) : error ? (
-        <p className="error-message">{error}</p>
-      ) : (
-        <>
+      <>
           {/* Email Traffic Chart */}
           <div className="chart-container">
             <h2>Email Traffic (Last 7 Days)</h2>
@@ -392,20 +415,30 @@ const Dashboard = () => {
           <div className="recent-logs-container">
             <div className="recent-logs-header">
               <h2>Recent Activity Feed</h2>
-              <button 
-                className="filter-button"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter size={16} />
-                Filters
-              </button>
+              <div className="header-actions">
+                <button 
+                  className="filter-button"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Filter size={16} />
+                  {showFilters ? 'Hide Filters' : 'Show Filters'}
+                </button>
+                <button className="refresh-icon-btn" onClick={fetchEmailActivity} title="Refresh">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="refresh-icon">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M1 20v-6h6"></path>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+                    <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Filters panel - moved here before the activity feed */}
             {showFilters && (
               <div className="filters-panel">
                 <div className="filters-header">
-                  <h2>Filter Dashboard Data</h2>
+                  <h2>Search & Filter</h2>
                   <button className="reset-filters-btn" onClick={resetFilters}>
                     Reset All
                   </button>
@@ -414,35 +447,84 @@ const Dashboard = () => {
                 <div className="filters-grid">
                   <div className="filter-group">
                     <label>Search</label>
-                    <input
-                      type="text"
-                      placeholder="Search by subject or sender..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="filter-input"
-                    />
+                    <div className="search-container">
+                      <Search size={16} className="search-icon" />
+                      <input
+                        type="text"
+                        placeholder="Search by subject or sender..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="search-input"
+                      />
+                    </div>
                   </div>
                   
                   <div className="filter-group">
-                    <label>Status</label>
+                    <label>Status/Label</label>
                     <div className="dropdown">
                       <button 
                         className="dropdown-toggle"
                         onClick={() => setShowStatusDropdown(!showStatusDropdown)}
                       >
-                        {statusFilter || "All"}
+                        {statusFilters.length > 0 || directionFilters.length > 0 ? 
+                          `${statusFilters.length + directionFilters.length} selected` : 
+                          "All"}
                         <ChevronDown size={16} />
                       </button>
                       {showStatusDropdown && (
-                        <div className="dropdown-menu">
-                          <div className="dropdown-item" onClick={() => handleStatusSelect("")}>
-                            All
+                        <div className="dropdown-menu status-label-dropdown">
+                          <div className="dropdown-section">
+                            <div className="dropdown-section-title">Status</div>
+                            <div className="dropdown-item">
+                              <div className="checkbox-input">
+                                <input
+                                  type="checkbox"
+                                  id="status-unread"
+                                  checked={statusFilters.includes("Unread")}
+                                  onChange={() => toggleStatusFilter("Unread")}
+                                />
+                                <label htmlFor="status-unread">Unread</label>
+                              </div>
+                            </div>
+                            <div className="dropdown-item">
+                              <div className="checkbox-input">
+                                <input
+                                  type="checkbox"
+                                  id="status-read"
+                                  checked={statusFilters.includes("Read")}
+                                  onChange={() => toggleStatusFilter("Read")}
+                                />
+                                <label htmlFor="status-read">Read</label>
+                              </div>
+                            </div>
                           </div>
-                          <div className="dropdown-item" onClick={() => handleStatusSelect("Unread")}>
-                            Unread
-                          </div>
-                          <div className="dropdown-item" onClick={() => handleStatusSelect("Read")}>
-                            Read
+                          
+                          <div className="dropdown-divider"></div>
+                          
+                          <div className="dropdown-section">
+                            <div className="dropdown-section-title">Direction</div>
+                            <div className="dropdown-item">
+                              <div className="checkbox-input">
+                                <input
+                                  type="checkbox"
+                                  id="direction-incoming"
+                                  checked={directionFilters.includes("Incoming")}
+                                  onChange={() => toggleDirectionFilter("Incoming")}
+                                />
+                                <label htmlFor="direction-incoming">Incoming</label>
+                              </div>
+                            </div>
+                            <div className="dropdown-item">
+                              <div className="checkbox-input">
+                                <input
+                                  type="checkbox"
+                                  id="direction-outgoing"
+                                  checked={directionFilters.includes("Outgoing")}
+                                  onChange={() => toggleDirectionFilter("Outgoing")}
+                                />
+                                <label htmlFor="direction-outgoing">Outgoing</label>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -476,20 +558,31 @@ const Dashboard = () => {
                 </div>
                 
                 {/* Active filters */}
-                {(statusFilter || searchTerm || (dateRange.start && dateRange.end)) && (
+                {(statusFilters.length > 0 || directionFilters.length > 0 || searchTerm || (dateRange.start && dateRange.end)) && (
                   <div className="active-filters-container">
                     <span className="active-filters-label">Active Filters:</span>
                     
-                    {statusFilter && (
-                      <div className="active-filter-tag">
-                        Status: {statusFilter}
+                    {statusFilters.map(status => (
+                      <div key={status} className="active-filter-tag">
+                        Status: {status}
                         <X 
                           size={14} 
                           className="remove-filter" 
-                          onClick={() => setStatusFilter("")} 
+                          onClick={() => toggleStatusFilter(status)} 
                         />
                       </div>
-                    )}
+                    ))}
+                    
+                    {directionFilters.map(direction => (
+                      <div key={direction} className="active-filter-tag">
+                        Direction: {direction}
+                        <X 
+                          size={14} 
+                          className="remove-filter" 
+                          onClick={() => toggleDirectionFilter(direction)} 
+                        />
+                      </div>
+                    ))}
                     
                     {searchTerm && (
                       <div className="active-filter-tag">
@@ -569,7 +662,7 @@ const Dashboard = () => {
             </table>
           </div>
         </>
-      )}
+      )&rbrace;
     </div>
   );
 };

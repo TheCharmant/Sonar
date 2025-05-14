@@ -2,6 +2,7 @@
 import { google } from "googleapis";
 import { db } from "../config/firebase.js";
 import { oauthClient } from "../config/oauth.js";
+import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
 
 // Fetch message IDs with optional pagination
 const fetchMessagesFromFolder = async (gmail, folder, maxResults = 20, pageToken = null) => {
@@ -48,11 +49,12 @@ const fetchEmailMetadata = async (gmail, messageId) => {
   };
 };
 
-// Helper to fetch full email (for expansion)
+// Helper to fetch email detail (for expansion)
 export const fetchEmailDetail = async (req, res) => {
   try {
     const { id } = req.query;
     const uid = req.user.uid;
+    const userEmail = req.user.email || uid;
 
     if (!id) return res.status(400).json({ error: "Missing email ID" });
 
@@ -61,6 +63,8 @@ export const fetchEmailDetail = async (req, res) => {
     
     // If admin, we need to determine which user's email we're fetching
     let tokenDoc;
+    let ownerUid = uid;
+    let ownerEmail = userEmail;
     
     if (isAdmin) {
       // For admins, we need to find which user owns this email
@@ -70,6 +74,14 @@ export const fetchEmailDetail = async (req, res) => {
       if (userId) {
         // If userId is provided, use that
         tokenDoc = await db.collection("oauth_tokens").doc(userId).get();
+        if (tokenDoc.exists) {
+          ownerUid = userId;
+          // Get the owner's email if possible
+          const userData = await db.collection("users").doc(userId).get();
+          if (userData.exists) {
+            ownerEmail = userData.data().email || userId;
+          }
+        }
       } else {
         // Otherwise, try to find any user with this email
         // This is less efficient but works for demo purposes
@@ -80,13 +92,44 @@ export const fetchEmailDetail = async (req, res) => {
           const tempDoc = await doc.get();
           if (tempDoc.exists) {
             tokenDoc = tempDoc;
+            ownerUid = doc.id;
+            // Get the owner's email if possible
+            const userData = await db.collection("users").doc(ownerUid).get();
+            if (userData.exists) {
+              ownerEmail = userData.data().email || ownerUid;
+            }
             break;
           }
         }
       }
+      
+      // Log admin viewing user's email
+      await createAuditLog({
+        user: userEmail,
+        role: "admin",
+        type: AuditLogTypes.EMAIL,
+        action: AuditLogActions.EMAIL_READ,
+        metadata: {
+          email_id: id,
+          user_email: ownerEmail,
+          user_id: ownerUid,
+          admin_action: true
+        }
+      });
     } else {
       // For regular users, just get their own token
       tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+      
+      // Log user reading their own email
+      await createAuditLog({
+        user: userEmail,
+        role: "user",
+        type: AuditLogTypes.EMAIL,
+        action: AuditLogActions.EMAIL_READ,
+        metadata: {
+          email_id: id
+        }
+      });
     }
     
     if (!tokenDoc || !tokenDoc.exists) {
@@ -126,23 +169,60 @@ export const fetchEmailDetail = async (req, res) => {
 
     const emailBody = extractBody(message.payload);
 
-    res.json({ email: { ...message, body: emailBody } });
+    res.json({ 
+      email: { ...message, body: emailBody },
+      ownerUid // Include the owner's UID for reference
+    });
   } catch (error) {
     console.error('Error fetching email details:', error);
     res.status(500).json({ error: 'Failed to fetch email details' });
   }
 };
 
-
 // Controller for /email/fetch (list view)
 export const fetchEmails = async (req, res) => {
-  const uid = req.user.uid;
-  const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
-  if (!tokenDoc.exists) return res.status(404).json({ error: "No tokens found" });
+  try {
+    const uid = req.user.uid;
+    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+    
+    if (!tokenDoc.exists) {
+      // Check if user has a different UID in the system based on their Gmail account
+      const userEmail = req.user.email;
+      if (userEmail) {
+        const existingTokensSnapshot = await db.collection("oauth_tokens")
+          .where("gmail_email", "==", userEmail)
+          .get();
+        
+        if (!existingTokensSnapshot.empty) {
+          const existingDoc = existingTokensSnapshot.docs[0];
+          // Use the existing token instead
+          const tokenData = existingDoc.data();
+          
+          // Set up Gmail client with the found token
+          const auth = new google.auth.OAuth2();
+          auth.setCredentials({ access_token: tokenData.access_token });
+          const gmail = google.gmail({ version: "v1", auth });
+          
+          // Continue with email fetching using this token
+          return await processEmailFetch(req, res, gmail);
+        }
+      }
+      
+      return res.status(404).json({ error: "No tokens found" });
+    }
 
-  oauthClient.setCredentials(tokenDoc.data());
-  const gmail = google.gmail({ version: "v1", auth: oauthClient });
+    oauthClient.setCredentials(tokenDoc.data());
+    const gmail = google.gmail({ version: "v1", auth: oauthClient });
+    
+    await processEmailFetch(req, res, gmail);
+  } catch (error) {
+    console.error("Error in fetching emails:", error);
+    res.status(500).json({ error: "Error fetching emails" });
+  }
+};
 
+// Helper function to process email fetching
+const processEmailFetch = async (req, res, gmail) => {
   // Get the folder or label to filter by
   const folderParam = req.query.folder?.toUpperCase();
   const labelParam = req.query.label;
@@ -178,8 +258,8 @@ export const fetchEmails = async (req, res) => {
 
     res.json({ emails: detailedMessages, nextPageToken });
   } catch (error) {
-    console.error("Error in fetching emails:", error);
-    res.status(500).json({ error: "Error fetching emails" });
+    console.error("Error in processing emails:", error);
+    res.status(500).json({ error: "Error processing emails" });
   }
 };
 

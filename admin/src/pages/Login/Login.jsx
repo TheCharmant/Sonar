@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Mail, Lock } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, Loader } from "lucide-react"
 import "./Login.css"
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "../../firebase"
@@ -18,6 +18,8 @@ const Login = () => {
     rememberMe: false,
   })
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [loginError, setLoginError] = useState(null)
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -25,41 +27,72 @@ const Login = () => {
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     })
+    
+    // Clear error when user starts typing
+    if (loginError) setLoginError(null);
   }
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    
+    try {
+      // Show loading state
+      setIsLoading(true);
+      
+      console.log("Attempting to sign in with:", formData.email);
+      
+      // Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      
+      console.log("Firebase sign-in successful");
+      
+      const user = userCredential.user;
+      const idToken = await user.getIdToken();
 
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-    const user = userCredential.user;
-    const idToken = await user.getIdToken();
+      // Send token to backend
+      console.log("Sending token to backend...");
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token: idToken }),
+      });
 
-    // Send token to backend
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ token: idToken }),
-    });
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Backend login failed:", errorData);
+        throw new Error(errorData.error || "Login failed");
+      }
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Login failed");
+      const data = await res.json();
+      console.log("Backend login successful:", data);
+      
+      // Store JWT in localStorage and context
+      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminRole", data.role);
+      setToken(data.token);
+      setRole(data.role);
 
-    // ✅ Store JWT in localStorage (optional) and context
-    localStorage.setItem("adminToken", data.token);
-    localStorage.setItem("adminRole", data.role); // ✅ important for refresh
-    setToken(data.token);
-    setRole(data.role);
-
-    navigate("/dashboard");
-  } catch (err) {
-    console.error("Login failed", err);
-    alert(err.message);
-  }
-};
-
+      // Navigate to dashboard
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Login failed", err);
+      
+      // Show specific error message based on error type
+      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        setLoginError("Invalid email or password");
+      } else if (err.code === "auth/too-many-requests") {
+        setLoginError("Too many failed login attempts. Please try again later.");
+      } else if (err.message === "Not an admin") {
+        setLoginError("This account does not have admin privileges");
+      } else {
+        setLoginError(err.message || "Login failed. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="auth-container">
@@ -75,6 +108,12 @@ const Login = () => {
 
         <div className="auth-form-container">
           <h2>Log In</h2>
+          
+          {loginError && (
+            <div className="error-message">
+              {loginError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
@@ -128,8 +167,19 @@ const Login = () => {
               </Link>
             </div>
 
-            <button type="submit" className="auth-button">
-              Log me in
+            <button 
+              type="submit" 
+              className="auth-button"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="loading-spinner">
+                  <Loader size={20} className="spinner-icon" />
+                  Logging in...
+                </span>
+              ) : (
+                "Log me in"
+              )}
             </button>
           </form>
         </div>

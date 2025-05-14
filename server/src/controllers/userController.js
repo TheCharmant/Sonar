@@ -1,120 +1,170 @@
-import usersRef from "../models/userModel.js";
+import { db } from "../config/firebase.js";
+import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
 
-// ✅ Helper: Gmail-only email validation
-const isValidGmail = (email) => /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
-
-// ✅ CREATE - Only allow @gmail.com and ensure email is unique
-const createUser = async (req, res) => {
-  try {
-    const { name, email, role = "user", status = "active" } = req.body;
-
-    if (!email || !name) {
-      return res.status(400).json({ error: "Name and email are required." });
-    }
-
-    // Check for Gmail format
-    if (!isValidGmail(email)) {
-      return res.status(400).json({ error: "Only Gmail addresses are allowed." });
-    }
-
-    // Check if email already exists
-    const snapshot = await usersRef.where("email", "==", email).get();
-    if (!snapshot.empty) {
-      return res.status(400).json({ error: "Email already exists." });
-    }
-
-    const newUser = {
-      name,
-      email,
-      role,
-      status,
-      createdAt: new Date().toISOString(),
-    };
-    const docRef = await usersRef.add(newUser);
-
-    res.status(201).json({ id: docRef.id, ...newUser });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
+// Get all users
 const getAllUsers = async (req, res) => {
   try {
-    const snapshot = await usersRef.where("status", "!=", "deleted").get();
-    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+    const snapshot = await db.collection("users").get();
+    const users = [];
+    
+    snapshot.forEach(doc => {
+      users.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
     res.status(200).json(users);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Error getting users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 };
 
-
-// ✅ READ - Single user
+// Get user by ID
 const getUserById = async (req, res) => {
   try {
-    const doc = await usersRef.doc(req.params.id).get();
-    if (!doc.exists) return res.status(404).json({ error: "User not found" });
-
-    res.status(200).json({ id: doc.id, ...doc.data() });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const { id } = req.params;
+    const userDoc = await db.collection("users").doc(id).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    res.status(200).json({
+      id: userDoc.id,
+      ...userDoc.data()
+    });
+  } catch (error) {
+    console.error("Error getting user:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
   }
 };
 
-// ✅ UPDATE - Only allow @gmail.com if email is updated
+// Create new user
+const createUser = async (req, res) => {
+  try {
+    const { email, name, role } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    
+    // Check if user already exists
+    const existingUsers = await db.collection("users").where("email", "==", email).get();
+    if (!existingUsers.empty) {
+      return res.status(400).json({ error: "User with this email already exists" });
+    }
+    
+    const newUser = {
+      email,
+      name: name || "",
+      role: role || "user",
+      status: "active",
+      createdAt: new Date().toISOString(),
+      lastLogin: null
+    };
+    
+    const docRef = await db.collection("users").add(newUser);
+    
+    // Create audit log
+    await createAuditLog({
+      type: AuditLogTypes.USER_MGMT,
+      action: AuditLogActions.USER_CREATED,
+      performedBy: req.user.uid,
+      details: {
+        userId: docRef.id,
+        email,
+        role: newUser.role
+      }
+    });
+    
+    res.status(201).json({
+      id: docRef.id,
+      ...newUser
+    });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+};
+
+// Update user
 const updateUser = async (req, res) => {
   try {
-    const { email } = req.body;
-
-    if (email && !isValidGmail(email)) {
-      return res.status(400).json({ error: "Only Gmail addresses are allowed." });
+    const { id } = req.params;
+    const { name, email } = req.body;
+    
+    const userDoc = await db.collection("users").doc(id).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
     }
-
-    await usersRef.doc(req.params.id).update(req.body);
-    res.status(200).json({ message: "User updated" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    
+    await db.collection("users").doc(id).update(updateData);
+    
+    // Create audit log
+    await createAuditLog({
+      type: AuditLogTypes.USER_MGMT,
+      action: AuditLogActions.USER_UPDATED,
+      performedBy: req.user.uid,
+      details: {
+        userId: id,
+        updatedFields: Object.keys(updateData)
+      }
+    });
+    
+    res.status(200).json({
+      id,
+      ...userDoc.data(),
+      ...updateData
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ error: "Failed to update user" });
   }
 };
 
-// ✅ DELETE (Soft)
+// Soft delete user (deactivate)
 const softDeleteUser = async (req, res) => {
   try {
-    await usersRef.doc(req.params.id).update({ status: "deleted" });
-    res.status(200).json({ message: "User soft-deleted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ✅ ACTIVATE
-const activateUser = async (req, res) => {
-  try {
-    await usersRef.doc(req.params.id).update({ status: "active" });
-    res.status(200).json({ message: "User activated" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ✅ CHANGE ROLE
-const changeUserRole = async (req, res) => {
-  try {
-    const { role } = req.body;
-    await usersRef.doc(req.params.id).update({ role });
-    res.status(200).json({ message: "Role updated" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const { id } = req.params;
+    
+    const userDoc = await db.collection("users").doc(id).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    await db.collection("users").doc(id).update({
+      status: "inactive",
+      deactivatedAt: new Date().toISOString()
+    });
+    
+    // Create audit log
+    await createAuditLog({
+      type: AuditLogTypes.USER_MGMT,
+      action: AuditLogActions.USER_DELETED,
+      performedBy: req.user.uid,
+      details: {
+        userId: id,
+        email: userDoc.data().email
+      }
+    });
+    
+    res.status(200).json({ message: "User deactivated successfully" });
+  } catch (error) {
+    console.error("Error deactivating user:", error);
+    res.status(500).json({ error: "Failed to deactivate user" });
   }
 };
 
 export default {
-  createUser,
   getAllUsers,
   getUserById,
+  createUser,
   updateUser,
-  softDeleteUser,
-  activateUser,
-  changeUserRole,
+  softDeleteUser
 };

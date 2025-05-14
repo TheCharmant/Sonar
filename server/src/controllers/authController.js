@@ -4,6 +4,7 @@ import { auth } from "../config/firebase.js";
 import { createUser } from "../models/userModel.js";
 import { getAuthUrl, getTokens, getUserInfo, oauthClient } from "../config/oauth.js";
 import { db } from "../config/firebase.js";
+import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
 
 dotenv.config();
 
@@ -44,6 +45,26 @@ export const oauthCallback = async (req, res) => {
     console.log("User info:", userInfo);
   
     const { email, name } = userInfo;
+    
+    // Check if this Gmail account is already connected to a user
+    const existingTokensSnapshot = await db.collection("oauth_tokens")
+      .where("gmail_email", "==", email)
+      .get();
+    
+    let isNewAccount = false;
+    
+    if (!existingTokensSnapshot.empty) {
+      const existingDoc = existingTokensSnapshot.docs[0];
+      const existingUid = existingDoc.id;
+      
+      if (existingUid !== uid) {
+        console.log("Gmail account found with different UID, using existing account");
+        // Instead of returning an error, use the existing account's UID
+        uid = existingUid;
+      }
+    } else {
+      isNewAccount = true;
+    }
   
     try {
       console.log("Checking Firebase user...");
@@ -55,13 +76,11 @@ export const oauthCallback = async (req, res) => {
         try {
           await auth.createUser({ uid, email });
           await createUser(uid, email, name);
+          isNewAccount = true;
         } catch (createErr) {
-          // Handle error if creation fails, but don't break the flow
           console.error("Error creating user:", createErr);
-          // You may want to continue even if there's an issue with user creation
         }
       } else if (err.code === 'auth/email-already-exists') {
-        // If the email is already in use, we just continue with the existing user flow
         console.log("Email already exists, skipping creation...");
       } else {
         console.error("Error getting user:", err);
@@ -70,16 +89,39 @@ export const oauthCallback = async (req, res) => {
     }
   
     console.log("Saving tokens to Firestore...");
-    await db.collection("oauth_tokens").doc(uid).set(tokens);
+    // Store the Gmail email along with the tokens for future checks
+    await db.collection("oauth_tokens").doc(uid).set({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expiry_date: tokens.expiry_date,
+      scope: tokens.scope,
+      token_type: tokens.token_type,
+      id_token: tokens.id_token,
+      gmail_email: email,
+      last_updated: new Date().toISOString()
+    });
+    
     const newToken = generateToken(uid);
+    
+    // Create audit log for the login or signup
+    await createAuditLog({
+      user: email,
+      role: "user",
+      type: AuditLogTypes.AUTH,
+      action: isNewAccount ? AuditLogActions.USER_CREATED : AuditLogActions.LOGIN,
+      metadata: {
+        uid,
+        method: "google_oauth",
+        timestamp: new Date().toISOString()
+      }
+    });
   
     console.log("Redirecting to frontend...");
     const frontendUrls = process.env.FRONTEND_URLS?.split(',') ?? [];
-const redirectUrl = frontendUrls[0]; // You can tweak this if you support multiple frontends
-res.redirect(`${redirectUrl}/dashboard?token=${newToken}`);
-
-} catch (err) {
-    console.error("OAuth callback failed:", err); // Add this as a final fallback
+    const redirectUrl = frontendUrls[0];
+    res.redirect(`${redirectUrl}/dashboard?token=${newToken}`);
+  } catch (err) {
+    console.error("OAuth callback failed:", err);
     return res.status(500).json({ error: "OAuth callback error" });
   }
 };

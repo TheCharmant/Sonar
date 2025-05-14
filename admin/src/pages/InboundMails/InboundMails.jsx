@@ -285,7 +285,14 @@ const InboundMails = () => {
   };
 
   if (role !== "admin") return <p className="p-6 text-red-500">Access denied. Admins only.</p>;
-  if (loading) return <p className="p-4">Loading inbound emails...</p>;
+  if (loading) return (
+    <div className="loading-container">
+      <div className="loading-spinner-container">
+        <div className="loading-spinner"></div>
+        <p>Loading inbound emails...</p>
+      </div>
+    </div>
+  );
   if (error) return <p className="p-4 text-red-500">{error}</p>;
 
   // Filter and sort emails based on user selections
@@ -426,26 +433,28 @@ const InboundMails = () => {
           <div className="filters-grid">
             <div className="filter-group">
               <label>Sender Email</label>
-              <div className="search-input">
-                <Search size={16} />
+              <div className="search-container">
+                <Search size={16} className="search-icon" />
                 <input
                   type="text"
                   placeholder="Filter by sender..."
                   value={senderFilter}
                   onChange={(e) => setSenderFilter(e.target.value)}
+                  className="search-input"
                 />
               </div>
             </div>
             
             <div className="filter-group">
               <label>Subject Keywords</label>
-              <div className="search-input">
-                <Search size={16} />
+              <div className="search-container">
+                <Search size={16} className="search-icon" />
                 <input
                   type="text"
                   placeholder="Filter by subject..."
                   value={subjectFilter}
                   onChange={(e) => setSubjectFilter(e.target.value)}
+                  className="search-input"
                 />
               </div>
             </div>
@@ -555,7 +564,7 @@ const InboundMails = () => {
         <table className="table">
           <thead>
             <tr>
-              <th>Date/Time (UTC)</th>
+              <th>Date</th>
               <th>Sender</th>
               <th>Subject</th>
               <th>Status</th>
@@ -572,7 +581,7 @@ const InboundMails = () => {
                 onClick={() => handleEmailClick(mail)}
                 style={{ cursor: 'pointer' }}
               >
-                <td>{mail.dateUTC}</td>
+                <td>{mail.dateFormatted}</td>
                 <td>
                   <div className="sender-info">
                     <div className="sender-name">{mail.sender}</div>

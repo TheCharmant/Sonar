@@ -1,12 +1,10 @@
 import express from "express";
-import auditLogController from "../controllers/auditLogController.js";
+import { requireRole } from "../middlewares/requireRole.js";
+import { getAuditLogs } from "../controllers/auditLogController.js";
 
 const router = express.Router();
 
-router.post("/", auditLogController.createAuditLog);
-router.get("/", auditLogController.getAllAuditLogs);
-router.get("/:id", auditLogController.getAuditLogById);
-router.put("/:id", auditLogController.updateAuditLog);
-router.delete("/:id", auditLogController.deleteAuditLog);
+// Get audit logs (admin only)
+router.get("/", requireRole("admin"), getAuditLogs);
 
 export default router;

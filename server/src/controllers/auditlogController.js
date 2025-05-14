@@ -1,6 +1,4 @@
-import admin from "firebase-admin";
-const db = admin.firestore();
-const auditLogsRef = db.collection("auditLogs");
+import { db } from "../config/firebase.js";
 
 // CREATE an audit log
 const createAuditLog = async (req, res) => {
@@ -11,38 +9,68 @@ const createAuditLog = async (req, res) => {
       role,
       type,
       action,
+      metadata = {}
     } = req.body;
 
     if (!user || !role || !type || !action) {
       return res.status(400).json({ error: "Missing required fields." });
     }
 
-    const newLog = { timestamp, user, role, type, action };
+    const newLog = { timestamp, user, role, type, action, metadata };
     const docRef = await auditLogsRef.add(newLog);
     res.status(201).json({ id: docRef.id, ...newLog });
   } catch (err) {
+    console.error("Error creating audit log:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// READ all audit logs
-const getAllAuditLogs = async (req, res) => {
+// Get audit logs with pagination and filtering
+export const getAuditLogs = async (req, res) => {
   try {
-    const snapshot = await auditLogsRef.orderBy("timestamp", "desc").get();
-    const logs = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
+    const { limit = 20, page = 1, type, action, startDate, endDate } = req.query;
+    
+    let query = db.collection("auditLogs").orderBy("timestamp", "desc");
+    
+    // Apply filters if provided
+    if (type) {
+      query = query.where("type", "==", type);
+    }
+    
+    if (action) {
+      query = query.where("action", "==", action);
+    }
+    
+    if (startDate && endDate) {
+      query = query.where("timestamp", ">=", startDate)
+                   .where("timestamp", "<=", endDate);
+    }
+    
+    // Pagination
+    const pageSize = parseInt(limit);
+    const startAt = (parseInt(page) - 1) * pageSize;
+    
+    const snapshot = await query.limit(pageSize).offset(startAt).get();
+    
+    const logs = [];
+    snapshot.forEach(doc => {
+      logs.push({
         id: doc.id,
-        timestamp: data.timestamp,
-        user: data.user,
-        role: data.role,
-        type: data.type,
-        action: data.action
-      };
+        ...doc.data()
+      });
     });
-    res.status(200).json(logs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    
+    res.status(200).json({
+      logs,
+      pagination: {
+        page: parseInt(page),
+        pageSize,
+        hasMore: logs.length === pageSize
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching audit logs:", error);
+    res.status(500).json({ error: "Failed to fetch audit logs" });
   }
 };
 
@@ -53,6 +81,7 @@ const getAuditLogById = async (req, res) => {
     if (!doc.exists) return res.status(404).json({ error: "Not found" });
     res.status(200).json({ id: doc.id, ...doc.data() });
   } catch (err) {
+    console.error("Error fetching audit log:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -63,6 +92,7 @@ const updateAuditLog = async (req, res) => {
     await auditLogsRef.doc(req.params.id).update(req.body);
     res.status(200).json({ message: "Log updated" });
   } catch (err) {
+    console.error("Error updating audit log:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -73,13 +103,14 @@ const deleteAuditLog = async (req, res) => {
     await auditLogsRef.doc(req.params.id).delete();
     res.status(200).json({ message: "Log deleted" });
   } catch (err) {
+    console.error("Error deleting audit log:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 export default {
   createAuditLog,
-  getAllAuditLogs,
+  getAuditLogs,
   getAuditLogById,
   updateAuditLog,
   deleteAuditLog,
