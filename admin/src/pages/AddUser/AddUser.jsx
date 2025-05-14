@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../AuthContext"
+import { Plus } from "lucide-react"
 import "./AddUser.css"
 
 const AddUser = () => {
@@ -12,6 +13,7 @@ const AddUser = () => {
     name: "",
     email: "",
     role: "user",
+    password: ""
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -39,22 +41,33 @@ const AddUser = () => {
     setError(null)
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/users`, {
+      // Get the token from localStorage if not available from context
+      const authToken = token || localStorage.getItem('adminToken')
+      
+      if (!authToken) {
+        throw new Error("Authentication token not found. Please log in again.")
+      }
+      
+      console.log("Submitting user data:", formData)
+      console.log("Using token:", authToken.substring(0, 10) + "...")
+      
+      // Try the JWT endpoint
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/users-jwt`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Authorization": `Bearer ${authToken}`
         },
         body: JSON.stringify(formData)
       })
       
+      const data = await response.json()
+      
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create user")
+        throw new Error(data.error || "Failed to create user")
       }
       
-      // Backend already logs this action
-      
+      console.log("User created successfully:", data)
       navigate("/user-management")
     } catch (err) {
       console.error("Error creating user:", err)
@@ -103,6 +116,20 @@ const AddUser = () => {
         </div>
         
         <div className="form-group">
+          <label htmlFor="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            placeholder="Enter temporary password"
+          />
+          <small>User will be prompted to change this on first login</small>
+        </div>
+        
+        <div className="form-group">
           <label>Role</label>
           <div className="role-selector">
             <button 
@@ -110,7 +137,7 @@ const AddUser = () => {
               className="role-dropdown-button"
               onClick={() => setShowRoleDropdown(!showRoleDropdown)}
             >
-              {formData.role || "Select Role"}
+              {formData.role === "admin" ? "Admin" : "User"}
             </button>
             
             {showRoleDropdown && (
@@ -137,7 +164,7 @@ const AddUser = () => {
             Cancel
           </button>
           <button type="submit" className="submit-button" disabled={loading}>
-            {loading ? "Creating..." : "Add New User"}
+            {loading ? "Creating..." : "Create User"}
           </button>
         </div>
       </form>

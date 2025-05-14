@@ -1,75 +1,107 @@
 import { createContext, useState, useEffect, useContext } from "react";
-import { auth } from "./firebase";
-import { onAuthStateChanged } from "firebase/auth";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(localStorage.getItem("adminToken") || null);
+  const [role, setRole] = useState(localStorage.getItem("adminRole") || null);
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [role, setRole] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        try {
-          const idToken = await currentUser.getIdToken();
-          setUser(currentUser);
-          setToken(idToken);
-        } catch (error) {
-          console.error("Error getting token:", error);
-        }
-      } else {
-        setUser(null);
-        setToken(null);
-        setRole(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    // Update authentication state when token changes
-    setIsAuthenticated(!!token);
+    // Check if token exists in localStorage
+    const storedToken = localStorage.getItem("adminToken");
+    const storedRole = localStorage.getItem("adminRole");
     
-    if (token) {
-      // Try to get role from localStorage if it exists
-      const storedRole = localStorage.getItem("adminRole");
-      if (storedRole) {
-        setRole(storedRole);
-      }
+    if (storedToken) {
+      setToken(storedToken);
+      setRole(storedRole);
       
-      localStorage.setItem("adminToken", token);
-      if (role) {
-        localStorage.setItem("adminRole", role);
-      }
+      // Validate token on startup
+      validateToken(storedToken);
     } else {
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("adminRole");
+      setLoading(false);
     }
-  }, [token, role]);
+  }, []);
+  
+  // Validate token with backend
+  const validateToken = async (tokenToValidate) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/auth/validate`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${tokenToValidate}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      } else {
+        // Token is invalid, clear auth state
+        logout();
+      }
+    } catch (error) {
+      console.error("Token validation error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const logout = () => {
-    setToken(null);
-    setRole(null);
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminRole");
+    setToken(null);
+    setRole(null);
+    setUser(null);
+  };
+
+  const getCustomToken = async (uid) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/auth/custom-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uid }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get custom token');
+      }
+      
+      const data = await response.json();
+      return data.token;
+    } catch (error) {
+      console.error('Error getting custom token:', error);
+      throw error;
+    }
+  };
+
+  const exchangeTokenIfNeeded = async (user) => {
+    try {
+      // Get a custom token that will work with our backend
+      const customToken = await getCustomToken(user.uid);
+      
+      // Sign in with the custom token to get an ID token
+      await signInWithCustomToken(auth, customToken);
+      
+      // Get the new ID token
+      const newIdToken = await user.getIdToken(true);
+      
+      // Use this token instead
+      return newIdToken;
+    } catch (error) {
+      console.error('Error exchanging token:', error);
+      // Fall back to the original token
+      return await user.getIdToken();
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      token, 
-      setToken, 
-      role, 
-      setRole, 
-      isAuthenticated,
-      loading,
-      logout
-    }}>
+    <AuthContext.Provider value={{ token, setToken, role, setRole, user, setUser, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

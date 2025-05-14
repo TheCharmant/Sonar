@@ -1,28 +1,32 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import EmailList from "../components/EmailList";
-import EmailDetail from "../components/EmailDetail";
-import { useAuth } from "../context/AuthContext";
-import type { EmailContent } from "../components/EmailDetail";
+import EmailList from "../../components/EmailList";
+import EmailDetail from "../../components/EmailDetail";
+import { useAuth } from "../../context/AuthContext";
+import type { EmailContent } from "../../components/EmailDetail";
 
 const Dashboard = () => {
   const { token, setToken } = useAuth();
   const navigate = useNavigate();
-  const [view, setView] = useState<"inbox" | "sent">("inbox");
-  const [currentScreen, setCurrentScreen] = useState<"list" | "detail">("list");
-  const [selectedEmail, setSelectedEmail] = useState<EmailContent | null>(null);
 
+  // Check for token in URL and in auth context
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get("token");
 
     if (tokenFromUrl) {
       setToken(tokenFromUrl);
+      // Remove token from URL to prevent it from being visible
       navigate("/dashboard", { replace: true });
     } else if (!token) {
+      // If no token in URL and no token in context, redirect to login
       navigate("/");
     }
-  }, [token, setToken, navigate]);
+  }, [token, navigate, setToken]);
+
+  const [view, setView] = useState<"inbox" | "sent">("inbox");
+  const [currentScreen, setCurrentScreen] = useState<"list" | "detail">("list");
+  const [selectedEmail, setSelectedEmail] = useState<EmailContent | null>(null);
 
   return (
     <div className="min-h-screen bg-white">
@@ -82,3 +86,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
