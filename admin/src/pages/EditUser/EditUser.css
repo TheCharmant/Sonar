@@ -1,15 +1,16 @@
-.add-user-container {
+.edit-user-container {
   max-width: 600px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 2rem 1rem;
+  position: relative;
 }
 
-.add-user-container h1 {
+.edit-user-container h1 {
   margin-bottom: 1.5rem;
   color: #333;
 }
 
-.add-user-form {
+.edit-user-form {
   background: white;
   border-radius: 8px;
   padding: 1.5rem;
@@ -121,3 +122,92 @@
   margin-bottom: 1.5rem;
   color: #ff4d4f;
 }
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+/* Add these styles without modifying existing ones */
+.password-reset-button {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.password-reset-button:disabled {
+  background-color: #adb5bd;
+  cursor: not-allowed;
+}
+
+.reset-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.reset-modal {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.reset-link-container {
+  display: flex;
+  margin: 15px 0;
+}
+
+.reset-link-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px 0 0 4px;
+  font-size: 14px;
+}
+
+.copy-link-button {
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+}
+
+.close-modal-button {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  float: right;
+  margin-top: 10px;
+}
+
+/* Add success message styling */
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  border: 1px solid #c3e6cb;
+}
+

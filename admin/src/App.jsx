@@ -10,14 +10,17 @@ import AuditLogs from "./pages/AuditLogs/AuditLogs";
 import UserManagement from "./pages/UserManagement/UserManagement";
 import Settings from "./pages/Settings/Settings";
 import AddUser from "./pages/AddUser/AddUser";
+import EditUser from "./pages/EditUser/EditUser";
 import Layout from "./components/Layout/Layout";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import "./App.css";
 import EnvDebug from './components/EnvDebug';
+import AuthDebug from './components/AuthDebug';
+import { AuthProvider } from '../src/AuthContext';
 
 function App() {
   return (
-    <>
+    <AuthProvider>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -33,6 +36,7 @@ function App() {
               <Route path="/audit-logs" element={<AuditLogs />} />
               <Route path="/user-management" element={<UserManagement />} />
               <Route path="/add-user" element={<AddUser />} />
+              <Route path="/edit-user/:id" element={<EditUser />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>
@@ -40,8 +44,8 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
-      {import.meta.env.DEV && <EnvDebug />}
-    </>
+      <AuthDebug />
+    </AuthProvider>
   );
 }
 
