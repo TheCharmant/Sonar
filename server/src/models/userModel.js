@@ -1,17 +1,23 @@
-import { db } from "../config/firebase.js";
 import admin from "firebase-admin";
 
+const db = admin.firestore();
 const usersRef = db.collection("users");
-
-const usersCollection = db.collection("users");
 
 export default usersRef;
 
 
-export const createUser = async (uid, email, name) => {
+export const createUser = async (uid, email, name, additionalData = {}) => {
   const userRef = db.collection("users").doc(uid);
-  await userRef.set({ email, name });
-  return { uid, email, name };
+  const userData = {
+    email, 
+    name,
+    role: additionalData.role || "user",
+    status: additionalData.status || "active",
+    createdAt: additionalData.createdAt || new Date().toISOString(),
+    ...additionalData
+  };
+  await userRef.set(userData);
+  return { uid, ...userData };
 };
 
 export const getUserById = async (uid) => {

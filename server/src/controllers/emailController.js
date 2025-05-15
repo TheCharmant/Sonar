@@ -2,93 +2,156 @@
 import { google } from "googleapis";
 import { db } from "../config/firebase.js";
 import { oauthClient } from "../config/oauth.js";
+import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
 
 // Fetch message IDs with optional pagination
 const fetchMessagesFromFolder = async (gmail, folder, maxResults = 20, pageToken = null) => {
-  const response = await gmail.users.messages.list({
-    userId: "me",
-    labelIds: [folder],
-    maxResults,
-    pageToken,
-  });
+  try {
+    console.log(`Fetching messages from folder: ${folder}, maxResults: ${maxResults}, pageToken: ${pageToken}`);
 
-  return {
-    messages: response.data.messages || [],
-    nextPageToken: response.data.nextPageToken || null,
-  };
+    const response = await gmail.users.messages.list({
+      userId: "me",
+      labelIds: [folder],
+      maxResults,
+      pageToken,
+    });
+
+    console.log(`Successfully fetched ${response.data.messages?.length || 0} messages from folder: ${folder}`);
+
+    return {
+      messages: response.data.messages || [],
+      nextPageToken: response.data.nextPageToken || null,
+    };
+  } catch (error) {
+    console.error(`Error fetching messages from folder ${folder}:`, error);
+    // Re-throw with more context
+    throw new Error(`Failed to fetch messages from ${folder}: ${error.message}`);
+  }
 };
 
 // Helper to fetch metadata only
 const fetchEmailMetadata = async (gmail, messageId) => {
-  const res = await gmail.users.messages.get({
-    userId: "me",
-    id: messageId,
-    format: "metadata",
-    metadataHeaders: ["Subject", "From", "To", "Date"],
-  });
+  try {
+    console.log(`Fetching metadata for message: ${messageId}`);
 
-  // Get the full message to check labels
-  const fullMessage = await gmail.users.messages.get({
-    userId: "me",
-    id: messageId,
-  });
+    const res = await gmail.users.messages.get({
+      userId: "me",
+      id: messageId,
+      format: "metadata",
+      metadataHeaders: ["Subject", "From", "To", "Date"],
+    });
 
-  // Include all labels from the message
-  const labels = fullMessage.data.labelIds?.map(labelId => ({ id: labelId })) || [];
+    // Get the full message to check labels
+    const fullMessage = await gmail.users.messages.get({
+      userId: "me",
+      id: messageId,
+    });
 
-  return {
-    id: res.data.id,
-    snippet: res.data.snippet,
-    payload: {
-      headers: res.data.payload.headers,
-      parts: res.data.payload.parts,
-    },
-    labels,
-    isUnread: fullMessage.data.labelIds?.includes("UNREAD") || false,
-  };
+    // Include all labels from the message
+    const labels = fullMessage.data.labelIds?.map(labelId => ({ id: labelId })) || [];
+
+    console.log(`Successfully fetched metadata for message: ${messageId}`);
+
+    return {
+      id: res.data.id,
+      snippet: res.data.snippet,
+      payload: {
+        headers: res.data.payload.headers,
+        parts: res.data.payload.parts,
+      },
+      labels,
+      isUnread: fullMessage.data.labelIds?.includes("UNREAD") || false,
+    };
+  } catch (error) {
+    console.error(`Error fetching metadata for message ${messageId}:`, error);
+    // Re-throw with more context
+    throw new Error(`Failed to fetch metadata for message ${messageId}: ${error.message}`);
+  }
 };
 
-// Helper to fetch full email (for expansion)
+// Helper to fetch email detail (for expansion)
 export const fetchEmailDetail = async (req, res) => {
   try {
     const { id } = req.query;
     const uid = req.user.uid;
+    const userEmail = req.user.email || uid;
 
     if (!id) return res.status(400).json({ error: "Missing email ID" });
 
     // Check if the user is an admin
     const isAdmin = req.user.role === 'admin';
-    
+
     // If admin, we need to determine which user's email we're fetching
     let tokenDoc;
-    
+    let ownerUid = uid;
+    let ownerEmail = userEmail;
+
     if (isAdmin) {
       // For admins, we need to find which user owns this email
       // This could be passed as a query parameter
       const userId = req.query.userId;
-      
+
       if (userId) {
         // If userId is provided, use that
         tokenDoc = await db.collection("oauth_tokens").doc(userId).get();
+        if (tokenDoc.exists) {
+          ownerUid = userId;
+          // Get the owner's email if possible
+          const userData = await db.collection("users").doc(userId).get();
+          if (userData.exists) {
+            ownerEmail = userData.data().email || userId;
+          }
+        }
       } else {
         // Otherwise, try to find any user with this email
         // This is less efficient but works for demo purposes
         const tokenDocs = await db.collection("oauth_tokens").listDocuments();
-        
+
         // Try each user's tokens until we find one that works
         for (const doc of tokenDocs) {
           const tempDoc = await doc.get();
           if (tempDoc.exists) {
             tokenDoc = tempDoc;
+            ownerUid = doc.id;
+            // Get the owner's email if possible
+            const userData = await db.collection("users").doc(ownerUid).get();
+            if (userData.exists) {
+              ownerEmail = userData.data().email || ownerUid;
+            }
             break;
           }
         }
       }
+
+      // Log admin viewing user's email
+      await createAuditLog({
+        type: AuditLogTypes.EMAIL,
+        action: AuditLogActions.EMAIL_READ,
+        performedBy: userEmail,
+        details: {
+          email_id: id,
+          user_email: ownerEmail,
+          user_id: ownerUid,
+          admin_action: true
+        },
+        targetUser: ownerUid
+      });
     } else {
       // For regular users, just get their own token
       tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+
+      // Log user reading their own email
+      await createAuditLog({
+        type: AuditLogTypes.EMAIL,
+        action: AuditLogActions.EMAIL_READ,
+        performedBy: userEmail,
+        details: {
+          email_id: id,
+          role: "user"
+        }
+      });
     }
-    
+
     if (!tokenDoc || !tokenDoc.exists) {
       return res.status(404).json({ error: "No tokens found" });
     }
@@ -126,32 +189,76 @@ export const fetchEmailDetail = async (req, res) => {
 
     const emailBody = extractBody(message.payload);
 
-    res.json({ email: { ...message, body: emailBody } });
+    res.json({
+      email: { ...message, body: emailBody },
+      ownerUid // Include the owner's UID for reference
+    });
   } catch (error) {
     console.error('Error fetching email details:', error);
     res.status(500).json({ error: 'Failed to fetch email details' });
   }
 };
 
-
 // Controller for /email/fetch (list view)
 export const fetchEmails = async (req, res) => {
-  const uid = req.user.uid;
-  const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
-  if (!tokenDoc.exists) return res.status(404).json({ error: "No tokens found" });
+  try {
+    const uid = req.user.uid;
+    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
 
-  oauthClient.setCredentials(tokenDoc.data());
-  const gmail = google.gmail({ version: "v1", auth: oauthClient });
+    if (!tokenDoc.exists) {
+      // Check if user has a different UID in the system based on their Gmail account
+      const userEmail = req.user.email;
+      if (userEmail) {
+        const existingTokensSnapshot = await db.collection("oauth_tokens")
+          .where("gmail_email", "==", userEmail)
+          .get();
 
+        if (!existingTokensSnapshot.empty) {
+          const existingDoc = existingTokensSnapshot.docs[0];
+          // Use the existing token instead
+          const tokenData = existingDoc.data();
+
+          // Set up Gmail client with the found token
+          const auth = new google.auth.OAuth2();
+          auth.setCredentials({ access_token: tokenData.access_token });
+          const gmail = google.gmail({ version: "v1", auth });
+
+          // Continue with email fetching using this token
+          return await processEmailFetch(req, res, gmail);
+        }
+      }
+
+      return res.status(404).json({ error: "No tokens found" });
+    }
+
+    oauthClient.setCredentials(tokenDoc.data());
+    const gmail = google.gmail({ version: "v1", auth: oauthClient });
+
+    await processEmailFetch(req, res, gmail);
+  } catch (error) {
+    console.error("Error in fetching emails:", error);
+    // Provide more detailed error message
+    const errorMessage = error.message || "Error fetching emails";
+    console.error("Detailed error:", errorMessage);
+    res.status(500).json({
+      error: "Error fetching emails",
+      message: errorMessage,
+      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    });
+  }
+};
+
+// Helper function to process email fetching
+const processEmailFetch = async (req, res, gmail) => {
   // Get the folder or label to filter by
   const folderParam = req.query.folder?.toUpperCase();
   const labelParam = req.query.label;
-  
+
   // Default allowed system folders
   const allowedFolders = ["INBOX", "SENT", "IMPORTANT", "STARRED", "DRAFT", "SPAM", "TRASH"];
-  
+
   let labelIds = [];
-  
+
   if (labelParam) {
     // If a specific label is requested, use that
     labelIds = [labelParam];
@@ -178,8 +285,15 @@ export const fetchEmails = async (req, res) => {
 
     res.json({ emails: detailedMessages, nextPageToken });
   } catch (error) {
-    console.error("Error in fetching emails:", error);
-    res.status(500).json({ error: "Error fetching emails" });
+    console.error("Error in processing emails:", error);
+    // Provide more detailed error message
+    const errorMessage = error.message || "Error processing emails";
+    console.error("Detailed error in processEmailFetch:", errorMessage);
+    res.status(500).json({
+      error: "Error processing emails",
+      message: errorMessage,
+      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    });
   }
 };
 
@@ -192,18 +306,18 @@ export const fetchAllEmailsForAdmin = async (req, res) => {
 
     // First, fetch all labels from all users to build a label map
     const labelMap = new Map();
-    
+
     for (const docRef of tokenDocs) {
       try {
         const tokenSnap = await docRef.get();
         if (!tokenSnap.exists || !tokenSnap.data()?.access_token) continue;
-        
+
         const auth = new google.auth.OAuth2();
         auth.setCredentials({ access_token: tokenSnap.data().access_token });
-        
+
         const gmail = google.gmail({ version: 'v1', auth });
         const labels = await fetchGmailLabels(gmail);
-        
+
         // Add each label to our map (using ID as key)
         labels.forEach(label => {
           labelMap.set(label.id, {
@@ -222,13 +336,13 @@ export const fetchAllEmailsForAdmin = async (req, res) => {
       try {
         const uid = docRef.id;
         console.log(`Processing user: ${uid}`);
-        
+
         const tokenSnap = await docRef.get();
         if (!tokenSnap.exists) {
           console.log(`No token data for user: ${uid}`);
           return { uid, inbox: [], sent: [] };
         }
-        
+
         const tokenData = tokenSnap.data();
         if (!tokenData?.access_token) {
           console.log(`No access token for user: ${uid}`);
@@ -237,7 +351,7 @@ export const fetchAllEmailsForAdmin = async (req, res) => {
 
         const auth = new google.auth.OAuth2();
         auth.setCredentials({ access_token: tokenData.access_token });
-        
+
         const gmail = google.gmail({ version: 'v1', auth });
 
         const fetchForFolder = async (folder) => {
@@ -245,16 +359,16 @@ export const fetchAllEmailsForAdmin = async (req, res) => {
             console.log(`Fetching ${folder} for user: ${uid}`);
             const { messages } = await fetchMessagesFromFolder(gmail, folder, 10);
             console.log(`Found ${messages?.length || 0} messages in ${folder} for user: ${uid}`);
-            
+
             if (!messages || messages.length === 0) {
               return [];
             }
-            
+
             const metadata = await Promise.all(
               messages.map(async (msg) => {
                 try {
                   const emailData = await fetchEmailMetadata(gmail, msg.id);
-                  
+
                   // Enhance labels with full details from our label map
                   if (emailData.labels && emailData.labels.length > 0) {
                     emailData.labels = emailData.labels.map(label => {
@@ -262,7 +376,7 @@ export const fetchAllEmailsForAdmin = async (req, res) => {
                       return fullLabel || { id: label, name: label };
                     });
                   }
-                  
+
                   return emailData;
                 } catch (err) {
                   console.error(`Error fetching metadata for message ${msg.id}:`, err);
@@ -270,7 +384,7 @@ export const fetchAllEmailsForAdmin = async (req, res) => {
                 }
               })
             );
-            
+
             return metadata.filter(item => item !== null);
           } catch (err) {
             console.error(`Failed to fetch for UID ${uid} in folder ${folder}:`, err);
@@ -314,7 +428,7 @@ const fetchGmailLabels = async (gmail) => {
     const response = await gmail.users.labels.list({
       userId: 'me'
     });
-    
+
     return response.data.labels || [];
   } catch (error) {
     console.error('Error fetching Gmail labels:', error);
@@ -327,22 +441,22 @@ export const getUserLabels = async (req, res) => {
   try {
     const uid = req.user.uid;
     const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
-    
+
     if (!tokenDoc.exists) {
       return res.status(404).json({ error: "No tokens found" });
     }
-    
+
     const { access_token } = tokenDoc.data();
-    
+
     const auth = new google.auth.OAuth2();
     auth.setCredentials({ access_token });
-    
+
     const gmail = google.gmail({ version: 'v1', auth });
-    
+
     const labels = await fetchGmailLabels(gmail);
-    
+
     // Return both system labels (INBOX, SENT, etc.) and user-created labels
-    res.json({ 
+    res.json({
       labels: labels.map(label => ({
         id: label.id,
         name: label.name,

@@ -113,4 +113,3 @@ const getActionClass = (action) => {
 }
 
 export default AuditLogs
-

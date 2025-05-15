@@ -1,26 +1,52 @@
-import { createContext, useState, useEffect, useContext } from "react";
-import type { ReactNode } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 
-type AuthContextType = {
+interface AuthContextType {
   token: string | null;
   setToken: (token: string | null) => void;
-};
+  logout: () => void;
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  token: null,
+  setToken: () => {},
+  logout: () => {},
+});
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+export const useAuth = () => useContext(AuthContext);
 
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Initialize token from localStorage
+  const [token, setTokenState] = useState<string | null>(null);
+
+  // Update localStorage when token changes
+  const setToken = (newToken: string | null) => {
+    setTokenState(newToken);
+    if (newToken) {
+      localStorage.setItem("token", newToken);
+    } else {
+      localStorage.removeItem("token");
+    }
+  };
+
+  // Logout function
+  const logout = () => {
+    setToken(null);
+    localStorage.removeItem("token");
+  };
+
+  // Check token on mount
   useEffect(() => {
-    if (token) localStorage.setItem("token", token);
-    else localStorage.removeItem("token");
-  }, [token]);
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setTokenState(storedToken);
+    }
+  }, []);
 
-  return <AuthContext.Provider value={{ token, setToken }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ token, setToken, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
-};
+

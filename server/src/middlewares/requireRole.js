@@ -1,49 +1,33 @@
-import { db } from "../config/firebase.js";
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
 
-// Require user to be a specific role
-export const requireRole = (requiredRoles) => {
-  return async (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ error: "Missing token" });
-
+export const requireRole = (role) => {
+  return (req, res, next) => {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // Get the token from the Authorization header
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized - No token provided' });
+      }
+      
+      const token = authHeader.split(' ')[1];
+      
+      // Verify the token
+      const secret = process.env.JWT_SECRET || 'your-secret-key';
+      const decoded = jwt.verify(token, secret);
+      
+      // Check if the user has the required role
+      if (decoded.role !== role) {
+        return res.status(403).json({ error: `Forbidden - ${role} access required` });
+      }
+      
+      // Add the user to the request object
       req.user = decoded;
-
-      const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
-
-      if (roles.includes(decoded.role)) {
-        return next();
-      }
-
-      // Optional fallback to Firestore lookup (for redundancy)
-      const doc = await db.collection(`${decoded.role}s`).doc(decoded.uid).get();
-      if (!doc.exists) {
-        return res.status(403).json({ error: "Forbidden: Role mismatch" });
-      }
-
-      return next();
-    } catch (err) {
-      console.error("JWT verification failed:", err);
-      return res.status(403).json({ error: "Invalid or expired token" });
+      
+      next();
+    } catch (error) {
+      console.error('Authentication error:', error);
+      res.status(401).json({ error: 'Unauthorized - Invalid token' });
     }
   };
-};
-
-
-export const verifyAdminToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(403).json({ error: "Token required" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;  // Store decoded user info for further processing
-    next();  // Proceed to the next middleware or route handler
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
 };

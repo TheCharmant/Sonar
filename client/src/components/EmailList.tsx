@@ -66,24 +66,38 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
   // Fetch labels when component mounts
   useEffect(() => {
     if (!token) return;
-    
+
     const fetchLabels = async () => {
       try {
-        const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/labels`);
-        
+        // Get the backend URL from environment variables, with a fallback
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        console.log('Using backend URL:', backendUrl);
+
+        const url = new URL(`${backendUrl}/api/email/labels`);
+
+        console.log(`Fetching labels from ${url.toString()}`);
         const res = await fetch(url.toString(), {
           headers: { Authorization: `Bearer ${token}` },
         });
-        
-        if (!res.ok) throw new Error("Failed to load labels");
-        
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Server error fetching labels:", errorData);
+
+          // Don't throw an error for "No tokens found" as we'll handle it in the email fetch
+          if (errorData.error !== "No tokens found") {
+            throw new Error(errorData.error || "Failed to load labels");
+          }
+          return;
+        }
+
         const data = await res.json();
         setLabels(data.labels);
       } catch (err) {
         console.error("Error fetching labels:", err);
       }
     };
-    
+
     fetchLabels();
   }, [token]);
 
@@ -92,26 +106,69 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
 
     const fetchInitial = async () => {
       try {
-        const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
+        // Get the backend URL from environment variables, with a fallback
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+        const url = new URL(`${backendUrl}/api/email/fetch`);
         url.searchParams.set("folder", folder.toUpperCase());
-        
+
         // Add label parameter if selected
         const selectedLabel = new URLSearchParams(window.location.search).get('label');
-        
+
         if (selectedLabel) {
           url.searchParams.set("label", selectedLabel);
         }
 
+        console.log(`Fetching emails from ${url.toString()}`);
         const res = await fetch(url.toString(), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) throw new Error("Failed to load emails");
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Server error:", errorData);
+
+          // Check if this is a "No tokens found" error
+          if (errorData.error === "No tokens found") {
+            setError("Gmail account not connected. Please connect your Gmail account in settings.");
+          }
+          // Check if this is an "Error processing emails" error
+          else if (errorData.error === "Error processing emails" || errorData.error === "Error fetching emails") {
+            // Use the detailed message if available
+            const detailedMessage = errorData.message || "There was a problem processing your emails";
+            console.error("Detailed error message:", detailedMessage);
+
+            // Check if the error is related to authentication or token issues
+            if (detailedMessage.includes("auth") ||
+                detailedMessage.includes("token") ||
+                detailedMessage.includes("credentials") ||
+                detailedMessage.includes("unauthorized") ||
+                detailedMessage.includes("permission")) {
+              setError("There was a problem with your Gmail authentication. Please reconnect your Gmail account in settings.");
+            } else {
+              setError("There was a problem processing your emails. This could be due to an expired or invalid token. Please reconnect your Gmail account in settings.");
+            }
+          }
+          else {
+            throw new Error(errorData.error || "Failed to load emails");
+          }
+          return;
+        }
 
         const data: EmailResponse = await res.json();
+
+        // Store emails in localStorage for analytics to use
+        try {
+          localStorage.setItem(`${folder}Emails`, JSON.stringify(data.emails));
+          console.log(`Stored ${data.emails.length} emails in localStorage for ${folder} folder`);
+        } catch (storageError) {
+          console.warn('Failed to store emails in localStorage:', storageError);
+        }
+
         setEmails(data.emails);
         setNextPageToken(data.nextPageToken || null);
       } catch (err) {
+        console.error("Error fetching emails:", err);
         setError(err instanceof Error ? err.message : "Failed to load emails");
       } finally {
         setLoading(false);
@@ -126,20 +183,66 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
 
     setLoading(true);
     try {
-      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
+      // Get the backend URL from environment variables, with a fallback
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+      const url = new URL(`${backendUrl}/api/email/fetch`);
       url.searchParams.set("folder", folder);
       url.searchParams.set("pageToken", nextPageToken);
 
+      console.log(`Loading more emails from ${url.toString()}`);
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error("Failed to load more emails");
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Server error loading more emails:", errorData);
+
+        // Check if this is a "No tokens found" error
+        if (errorData.error === "No tokens found") {
+          setError("Gmail account not connected. Please connect your Gmail account in settings.");
+          return;
+        }
+        // Check if this is an "Error processing emails" error
+        else if (errorData.error === "Error processing emails" || errorData.error === "Error fetching emails") {
+          // Use the detailed message if available
+          const detailedMessage = errorData.message || "There was a problem processing your emails";
+          console.error("Detailed error message:", detailedMessage);
+
+          // Check if the error is related to authentication or token issues
+          if (detailedMessage.includes("auth") ||
+              detailedMessage.includes("token") ||
+              detailedMessage.includes("credentials") ||
+              detailedMessage.includes("unauthorized") ||
+              detailedMessage.includes("permission")) {
+            setError("There was a problem with your Gmail authentication. Please reconnect your Gmail account in settings.");
+          } else {
+            setError("There was a problem processing your emails. This could be due to an expired or invalid token. Please reconnect your Gmail account in settings.");
+          }
+          return;
+        }
+
+        throw new Error(errorData.error || "Failed to load more emails");
+      }
 
       const data: EmailResponse = await res.json();
-      setEmails(prev => [...prev, ...data.emails]);
+
+      // Update emails state
+      const updatedEmails = [...emails, ...data.emails];
+      setEmails(updatedEmails);
+
+      // Store updated emails in localStorage for analytics to use
+      try {
+        localStorage.setItem(`${folder}Emails`, JSON.stringify(updatedEmails));
+        console.log(`Updated localStorage with ${updatedEmails.length} emails for ${folder} folder`);
+      } catch (storageError) {
+        console.warn('Failed to update emails in localStorage:', storageError);
+      }
+
       setNextPageToken(data.nextPageToken || null);
     } catch (err) {
+      console.error("Error loading more emails:", err);
       setError(err instanceof Error ? err.message : "Failed to load more emails");
     } finally {
       setLoading(false);
@@ -156,12 +259,41 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
         setModalOpen(true);
       }
 
+      // Get the backend URL from environment variables, with a fallback
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+      const url = `${backendUrl}/api/email/detail?id=${messageId}`;
+      console.log(`Fetching email detail from ${url}`);
+
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/email/detail?id=${messageId}`,
+        url,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (!res.ok) throw new Error("Failed to load email");
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Server error fetching email detail:", errorData);
+
+        // Check if this is a "No tokens found" error
+        if (errorData.error === "No tokens found") {
+          throw new Error("Gmail account not connected. Please connect your Gmail account in settings.");
+        }
+        // Check if this is an error with a detailed message
+        else if (errorData.message) {
+          console.error("Detailed error message:", errorData.message);
+
+          // Check if the error is related to authentication or token issues
+          if (errorData.message.includes("auth") ||
+              errorData.message.includes("token") ||
+              errorData.message.includes("credentials") ||
+              errorData.message.includes("unauthorized") ||
+              errorData.message.includes("permission")) {
+            throw new Error("There was a problem with your Gmail authentication. Please reconnect your Gmail account in settings.");
+          }
+        }
+
+        throw new Error(errorData.error || "Failed to load email");
+      }
 
       const { email } = await res.json();
 
@@ -745,7 +877,69 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
   };
 
   if (loading && emails.length === 0) return <div className="p-4">Loading emails...</div>;
-  if (error && emails.length === 0) return <div className="p-4 text-red-500">{error}</div>;
+
+  if (error && emails.length === 0) {
+    // Check if this is a "Gmail account not connected" error or token issue
+    if (error.includes("Gmail account not connected") || error.includes("reconnect your Gmail account")) {
+      return (
+        <div className="p-8 text-center">
+          <div className="mb-4 text-amber-600">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2">Gmail Account Not Connected</h2>
+          <p className="text-gray-600 mb-4">You need to connect your Gmail account to view your emails.</p>
+          <a href="/settings" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 inline-flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+            Go to Settings
+          </a>
+        </div>
+      );
+    }
+
+    // For server errors
+    if (error.includes("500") || error.includes("Server Error")) {
+      return (
+        <div className="p-8 text-center">
+          <div className="mb-4 text-red-600">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2">Server Error</h2>
+          <p className="text-gray-600 mb-4">There was a problem connecting to the server. Please try again later.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    // Generic error
+    return (
+      <div className="p-8 text-center">
+        <div className="mb-4 text-red-600">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold mb-2">Error Loading Emails</h2>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full">

@@ -3,15 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import { getEmailAnalytics } from '../../services/analyticsService';
 import type { EmailAnalytics } from '../../services/analyticsService';
 
-// Helper function to get the current month name
-const getCurrentMonthName = (): string => {
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  return months[new Date().getMonth()];
-};
-
 // Direct import of the fetch function to get emails
 const fetchEmails = async (token: string, folder: 'inbox' | 'sent'): Promise<any[]> => {
   try {

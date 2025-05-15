@@ -1,5 +1,5 @@
 import React from 'react';
-import { EmailAnalytics } from '../../services/analyticsService';
+import type { EmailAnalytics } from '../../services/analyticsService';
 
 interface AnalyticsSummaryProps {
   analytics: EmailAnalytics;
@@ -8,20 +8,25 @@ interface AnalyticsSummaryProps {
 const AnalyticsSummary: React.FC<AnalyticsSummaryProps> = ({ analytics }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-      {/* Total Messages Received */}
+      {/* Total Inbox Messages */}
       <div className="bg-purple-50 p-4 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-700">Total Messages Received</h3>
+        <h3 className="text-lg font-medium text-gray-700">Total Inbox Messages</h3>
         <div className="flex items-end mt-2">
           <span className="text-3xl font-bold text-purple-600">{analytics.totalMessagesReceived}</span>
-          <span className="ml-2 text-sm text-gray-500">this month</span>
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          All messages in your inbox
         </div>
       </div>
 
-      {/* Messages Sent */}
+      {/* Total Sent Messages */}
       <div className="bg-purple-50 p-4 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-700">Messages Sent</h3>
+        <h3 className="text-lg font-medium text-gray-700">Total Sent Messages</h3>
         <div className="flex items-end mt-2">
           <span className="text-3xl font-bold text-purple-600">{analytics.messagesSent}</span>
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          All messages in your sent folder
         </div>
       </div>
 

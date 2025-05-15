@@ -1,0 +1,12 @@
+/* Add styling for the deactivated error message if not already present */
+.deactivated-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #fff5f5;
+  color: #e53e3e;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #fed7d7;
+}

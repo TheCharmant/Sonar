@@ -1,60 +1,229 @@
-import { auth } from "../config/firebase.js";
+import { auth, db } from "../config/firebase.js";
 import jwt from "jsonwebtoken";
-import { db } from "../config/firebase.js";
+import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
 
-// Helper function to generate JWT for the admin
-const generateToken = (uid, role) => {
-  return jwt.sign({ uid, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+// Generate JWT token with improved security
+const generateToken = (uid, role, email) => {
+  return jwt.sign(
+    { uid, role, email, timestamp: Date.now() },
+    process.env.JWT_SECRET || "your-secret-key",
+    { expiresIn: "8h" } // Shorter expiration for better security
+  );
 };
 
-// 🔐 Email/password admin login
+// Admin login with enhanced logging and security
 export const adminLogin = async (req, res) => {
-  const { token } = req.body;
-  if (!token) return res.status(400).json({ error: "Missing Firebase ID token" });
-
   try {
+    const { token } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    
+    if (!token) {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.LOGIN_FAILED,
+        performedBy: "unknown",
+        details: {
+          reason: "Missing token",
+          ipAddress,
+          userAgent
+        }
+      });
+      return res.status(400).json({ error: "Missing Firebase ID token" });
+    }
+    
+    // Verify the Firebase token
     const decodedToken = await auth.verifyIdToken(token);
-    const { uid } = decodedToken;
-
-    const adminDoc = await db.collection("admins").doc(uid).get();
-    if (!adminDoc.exists) return res.status(403).json({ error: "Not an admin" });
-
-    const adminToken = generateToken(uid, "admin");
-
-    // ✅ FIX: Add role to response
-    return res.json({ token: adminToken, role: "admin" });
-  } catch (err) {
-    console.error("Admin login failed:", err);
-    return res.status(401).json({ error: "Invalid login or token" });
+    const { uid, email } = decodedToken;
+    
+    // First check in the users collection
+    let userDoc = await db.collection("users").doc(uid).get();
+    let isAdmin = false;
+    let userData = null;
+    
+    // If not found in users collection, check in admins collection
+    if (!userDoc.exists) {
+      userDoc = await db.collection("admins").doc(uid).get();
+      
+      if (userDoc.exists) {
+        userData = userDoc.data();
+        isAdmin = userData.role === "admin";
+      }
+    } else {
+      userData = userDoc.data();
+      isAdmin = userData.role === "admin";
+    }
+    
+    if (!userDoc.exists) {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.LOGIN_FAILED,
+        performedBy: uid,
+        details: {
+          email,
+          reason: "User not found",
+          ipAddress,
+          userAgent
+        }
+      });
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    if (!isAdmin) {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.LOGIN_FAILED,
+        performedBy: uid,
+        details: {
+          email,
+          reason: "Insufficient permissions",
+          role: userData.role,
+          ipAddress,
+          userAgent
+        }
+      });
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+    
+    // Check if user is inactive/deactivated
+    if (userData.status === "inactive") {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.LOGIN_FAILED,
+        performedBy: uid,
+        details: {
+          email,
+          reason: "Account deactivated",
+          ipAddress,
+          userAgent
+        }
+      });
+      
+      return res.status(403).json({ 
+        error: "Your account has been deactivated. Please contact an administrator.",
+        code: "account_deactivated"
+      });
+    }
+    
+    // Update last login in the appropriate collection
+    const collectionName = userDoc.ref.parent.id;
+    await db.collection(collectionName).doc(uid).update({
+      lastLogin: new Date().toISOString(),
+      lastLoginIP: ipAddress,
+      lastLoginUserAgent: userAgent
+    });
+    
+    // Generate JWT token
+    const jwtToken = generateToken(uid, "admin", email);
+    
+    // Create audit log for successful login
+    await createAuditLog({
+      type: AuditLogTypes.AUTH,
+      action: AuditLogActions.LOGIN_SUCCESS,
+      performedBy: uid,
+      details: {
+        email,
+        role: "admin",
+        ipAddress,
+        userAgent
+      }
+    });
+    
+    res.status(200).json({
+      token: jwtToken,
+      role: "admin",
+      user: {
+        uid,
+        email,
+        name: userData.name || ""
+      }
+    });
+  } catch (error) {
+    console.error("Admin login error:", error);
+    
+    // Only log authentication errors that aren't already logged
+    // Don't create duplicate logs for already handled errors
+    if (!error.logged) {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.LOGIN_FAILED,
+        performedBy: "unknown",
+        details: {
+          error: error.message,
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.headers['user-agent']
+        }
+      });
+    }
+    
+    res.status(500).json({ error: "Authentication failed" });
   }
 };
 
-
-
-
-// 🧠 Optional: Google login for pre-approved admin accounts
-export const adminGoogleCallback = async (req, res) => {
-  const { code } = req.query;
-  if (!code) return res.status(400).json({ error: "Missing code" });
-
+/**
+ * Validate admin token
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const validateToken = async (req, res) => {
   try {
-    const tokens = await getTokens(code);
-    oauthClient.setCredentials(tokens);
-    const userInfo = await getUserInfo(tokens.access_token);
-    const { email } = userInfo;
-
-    // Look up user by email in admins collection
-    const snapshot = await db.collection("admins").where("email", "==", email).get();
-    if (snapshot.empty) return res.status(403).json({ error: "Not authorized" });
-
-    // You could also create Firebase user or sync data here
-    const [adminDoc] = snapshot.docs;
-    const uid = adminDoc.id;
-
-    const token = generateToken(uid, "admin");
-    return res.redirect(`${process.env.FRONTEND_URL}/admin/dashboard?token=${token}`);
-  } catch (err) {
-    console.error("Admin Google OAuth failed:", err);
-    return res.status(500).json({ error: "OAuth error" });
+    // If the request made it past the requireRole middleware,
+    // the token is valid and the user has admin privileges
+    res.status(200).json({
+      valid: true,
+      user: req.user
+    });
+  } catch (error) {
+    console.error("Token validation error:", error);
+    res.status(500).json({ error: "Token validation failed" });
   }
+};
+
+export const getJWTToken = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ error: "Missing Firebase ID token" });
+    }
+    
+    // Verify the Firebase token
+    const decodedToken = await auth.verifyIdToken(token);
+    const { uid, email } = decodedToken;
+    
+    // Check if user is an admin
+    const userDoc = await db.collection("users").doc(uid).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    const userData = userDoc.data();
+    
+    if (userData.role !== "admin") {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+    
+    // Generate JWT token
+    const jwtToken = generateToken(uid, "admin", email);
+    
+    res.status(200).json({
+      token: jwtToken,
+      role: "admin",
+      user: {
+        uid,
+        email,
+        name: userData.name || ""
+      }
+    });
+  } catch (error) {
+    console.error("Error generating JWT token:", error);
+    res.status(500).json({ error: "Authentication failed" });
+  }
+};
+
+export default {
+  adminLogin,
+  validateToken,
+  getJWTToken
 };

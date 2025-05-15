@@ -18,11 +18,11 @@ import {
   Eye
 } from "lucide-react";
 import "./OutboundMails.css";
-import EmailDetail from "../../components/AdminEmailDetail"; // Import the EmailDetail component
+import EmailDetail from "../../components/AdminEmailDetail";
 
-const InboundMails = () => {
+const OutboundMails = () => {
   const { token, role } = useAuth();
-  const [inboundMails, setInboundMails] = useState([]);
+  const [outboundMails, setOutboundMails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedEmail, setExpandedEmail] = useState(null);
@@ -44,7 +44,7 @@ const InboundMails = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [dateRange, setDateRange] = useState({ start: null, end: null });
-  const [senderFilter, setSenderFilter] = useState("");
+  const [recipientFilter, setRecipientFilter] = useState("");
   const [subjectFilter, setSubjectFilter] = useState("");
   const [hasAttachmentFilter, setHasAttachmentFilter] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState([]);
@@ -58,11 +58,11 @@ const InboundMails = () => {
 
   useEffect(() => {
     if (!token) return;
-    fetchInboundEmails();
+    fetchOutboundEmails();
     fetchLabelMetadata();
   }, [token]);
 
-  const fetchInboundEmails = async () => {
+  const fetchOutboundEmails = async () => {
     setLoading(true);
     setError("");
 
@@ -80,28 +80,28 @@ const InboundMails = () => {
 
       const data = await res.json();
       
-      // Transform the data to match the inboundMails format
-      const allInboundMails = data.users.flatMap(user => 
-        user.inbox.map(email => {
+      // Transform the data to match the outboundMails format, but only use sent emails
+      const allOutboundMails = data.users.flatMap(user => 
+        user.sent.map(email => {
           const subject = email.payload.headers.find(h => h.name === "Subject")?.value || "No Subject";
-          const from = email.payload.headers.find(h => h.name === "From")?.value || "Unknown Sender";
+          const to = email.payload.headers.find(h => h.name === "To")?.value || "Unknown Recipient";
           const date = email.payload.headers.find(h => h.name === "Date")?.value;
           const messageId = email.payload.headers.find(h => h.name === "Message-ID")?.value;
           const inReplyTo = email.payload.headers.find(h => h.name === "In-Reply-To")?.value;
           const references = email.payload.headers.find(h => h.name === "References")?.value;
           
-          // Format the sender to show name first, then email without <>
-          let senderName = "";
-          let senderEmail = "";
+          // Format the recipient to show name first, then email without <>
+          let recipientName = "";
+          let recipientEmail = "";
           
-          if (from.includes("<")) {
+          if (to.includes("<")) {
             // Format: "Name <email@example.com>"
-            const parts = from.split("<");
-            senderName = parts[0].trim();
-            senderEmail = parts[1].replace(">", "").trim();
+            const parts = to.split("<");
+            recipientName = parts[0].trim();
+            recipientEmail = parts[1].replace(">", "").trim();
           } else {
             // Format: just email
-            senderEmail = from.trim();
+            recipientEmail = to.trim();
           }
           
           // Calculate email size (placeholder - would come from actual API)
@@ -118,10 +118,10 @@ const InboundMails = () => {
             })) : [];
           
           return {
-            sender: senderName || senderEmail,
-            senderEmail: senderEmail,
+            recipient: recipientName || recipientEmail,
+            recipientEmail: recipientEmail,
             subject: subject,
-            status: email.isUnread ? "Unread" : "Read",
+            status: "Sent",
             dateSent: date ? new Date(date) : null, // Keep as Date object for filtering
             dateFormatted: date ? new Date(date).toLocaleString('en-US', {
               month: 'short',
@@ -147,7 +147,7 @@ const InboundMails = () => {
         })
       );
       
-      setInboundMails(allInboundMails);
+      setOutboundMails(allOutboundMails);
     } catch (err) {
       if (err instanceof Error) setError(err.message);
       else setError("Unknown error");
@@ -161,9 +161,9 @@ const InboundMails = () => {
     return {
       id: email.id,
       subject: email.subject || "No Subject",
-      from: email.sender || "Unknown Sender",
+      to: email.recipient || "Unknown Recipient",
       date: email.dateUTC || new Date().toISOString(),
-      to: email.recipient || "",
+      from: email.sender || "",
       cc: email.cc || "",
       bcc: email.bcc || "",
       body: email.preview || "No content available"
@@ -202,9 +202,9 @@ const InboundMails = () => {
       const emailContent = {
         id: email.id,
         subject: email.subject || "No Subject",
-        from: email.sender || "Unknown Sender",
+        to: email.recipient || "Unknown Recipient",
         date: email.dateUTC || new Date().toISOString(),
-        to: email.recipient || "",
+        from: message.from || "",
         cc: email.cc || "",
         bcc: email.bcc || "",
         body: message.body || message.snippet || email.preview || "No content available"
@@ -238,7 +238,7 @@ const InboundMails = () => {
 
   const resetFilters = () => {
     setSearchTerm("");
-    setSenderFilter("");
+    setRecipientFilter("");
     setSubjectFilter("");
     setStatusFilter("");
     setLabelFilter("");
@@ -259,20 +259,20 @@ const InboundMails = () => {
   // Add this function to fetch label metadata
   const fetchLabelMetadata = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/email/admin/labels`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/email/labels`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+      
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to fetch label metadata");
+        console.error("Failed to fetch label metadata");
+        return;
       }
-
+      
       const { labels } = await res.json();
       
-      // Convert array to object for easier lookup
+      // Convert to object with label ID as key
       const labelMap = {};
       labels.forEach(label => {
         labelMap[label.id] = label;
@@ -285,27 +285,34 @@ const InboundMails = () => {
   };
 
   if (role !== "admin") return <p className="p-6 text-red-500">Access denied. Admins only.</p>;
-  if (loading) return <p className="p-4">Loading inbound emails...</p>;
+  if (loading) return (
+    <div className="loading-container">
+      <div className="loading-spinner-container">
+        <div className="loading-spinner"></div>
+        <p>Loading outbound emails...</p>
+      </div>
+    </div>
+  );
   if (error) return <p className="p-4 text-red-500">{error}</p>;
 
   // Filter and sort emails based on user selections
-  let filteredMails = [...inboundMails];
+  let filteredMails = [...outboundMails];
   
   // Apply search filter
   if (searchTerm) {
     filteredMails = filteredMails.filter(mail => 
-      mail.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mail.senderEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mail.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mail.recipientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mail.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mail.preview.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }
   
-  // Apply sender filter
-  if (senderFilter) {
+  // Apply recipient filter
+  if (recipientFilter) {
     filteredMails = filteredMails.filter(mail => 
-      mail.sender.toLowerCase().includes(senderFilter.toLowerCase()) ||
-      mail.senderEmail.toLowerCase().includes(senderFilter.toLowerCase())
+      mail.recipient.toLowerCase().includes(recipientFilter.toLowerCase()) ||
+      mail.recipientEmail.toLowerCase().includes(recipientFilter.toLowerCase())
     );
   }
   
@@ -377,7 +384,7 @@ const InboundMails = () => {
 
   // Get all unique labels for filter dropdown
   const allLabels = Array.from(new Set(
-    inboundMails.flatMap(mail => mail.labels.map(label => label.name || label.id))
+    outboundMails.flatMap(mail => mail.labels.map(label => label.name || label.id))
   ));
 
   // Add a function to handle status/label selection
@@ -403,7 +410,7 @@ const InboundMails = () => {
             <Filter size={16} />
             {showFilters ? 'Hide Filters' : 'Show Filters'}
           </button>
-          <button className="refresh-icon-btn" onClick={fetchInboundEmails} title="Refresh">
+          <button className="refresh-icon-btn" onClick={fetchOutboundEmails} title="Refresh">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="refresh-icon">
               <path d="M23 4v6h-6"></path>
               <path d="M1 20v-6h6"></path>
@@ -425,27 +432,29 @@ const InboundMails = () => {
           
           <div className="filters-grid">
             <div className="filter-group">
-              <label>Sender Email</label>
-              <div className="search-input">
-                <Search size={16} />
+              <label>Recipient Email</label>
+              <div className="search-container">
+                <Search size={16} className="search-icon" />
                 <input
                   type="text"
-                  placeholder="Filter by sender..."
-                  value={senderFilter}
-                  onChange={(e) => setSenderFilter(e.target.value)}
+                  placeholder="Filter by recipient..."
+                  value={recipientFilter}
+                  onChange={(e) => setRecipientFilter(e.target.value)}
+                  className="search-input"
                 />
               </div>
             </div>
             
             <div className="filter-group">
               <label>Subject Keywords</label>
-              <div className="search-input">
-                <Search size={16} />
+              <div className="search-container">
+                <Search size={16} className="search-icon" />
                 <input
                   type="text"
                   placeholder="Filter by subject..."
                   value={subjectFilter}
                   onChange={(e) => setSubjectFilter(e.target.value)}
+                  className="search-input"
                 />
               </div>
             </div>
@@ -456,93 +465,81 @@ const InboundMails = () => {
                 <input
                   type="date"
                   value={dateRange.start ? dateRange.start.toISOString().split('T')[0] : ''}
-                  onChange={(e) => setDateRange({
-                    ...dateRange,
-                    start: e.target.value ? new Date(e.target.value) : null
-                  })}
+                  onChange={(e) => setDateRange({...dateRange, start: e.target.value ? new Date(e.target.value) : null})}
                 />
                 <span>to</span>
                 <input
                   type="date"
                   value={dateRange.end ? dateRange.end.toISOString().split('T')[0] : ''}
-                  onChange={(e) => setDateRange({
-                    ...dateRange,
-                    end: e.target.value ? new Date(e.target.value) : null
-                  })}
+                  onChange={(e) => setDateRange({...dateRange, end: e.target.value ? new Date(e.target.value) : null})}
                 />
               </div>
             </div>
             
             <div className="filter-group">
-              <label>Status/Label</label>
-              <div className="dropdown">
-                <button 
-                  className="dropdown-toggle"
-                  onClick={() => setShowStatusLabelDropdown(!showStatusLabelDropdown)}
-                >
-                  {statusFilter || labelFilter || "All"}
-                  <ChevronDown size={16} />
-                </button>
-                {showStatusLabelDropdown && (
-                  <div className="dropdown-menu status-label-dropdown">
-                    <div className="dropdown-section">
-                      <div className="dropdown-section-title">Status</div>
-                      <div className="dropdown-item" onClick={() => handleStatusLabelSelect('status', "")}>
-                        All Statuses
-                      </div>
-                      <div className="dropdown-item" onClick={() => handleStatusLabelSelect('status', "Unread")}>
-                        Unread
-                      </div>
-                      <div className="dropdown-item" onClick={() => handleStatusLabelSelect('status', "Read")}>
-                        Read
-                      </div>
-                    </div>
-                    
-                    <div className="dropdown-divider"></div>
-                    
-                    <div className="dropdown-section">
-                      <div className="dropdown-section-title">Labels</div>
-                      <div className="dropdown-item" onClick={() => handleStatusLabelSelect('label', "")}>
-                        All Labels
-                      </div>
-                      {allLabels.map(label => (
-                        <div 
-                          key={label} 
-                          className="dropdown-item"
-                          onClick={() => handleStatusLabelSelect('label', label)}
-                        >
-                          {label}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <label>Status</label>
+              <div className="status-filter-options">
+                <div className="checkbox-input">
+                  <input
+                    type="checkbox"
+                    id="status-sent"
+                    checked={statusFilter === "Sent"}
+                    onChange={(e) => setStatusFilter(e.target.checked ? "Sent" : "")}
+                  />
+                  <label htmlFor="status-sent">Sent</label>
+                </div>
+                <div className="checkbox-input">
+                  <input
+                    type="checkbox"
+                    id="status-delivered"
+                    checked={statusFilter === "Delivered"}
+                    onChange={(e) => setStatusFilter(e.target.checked ? "Delivered" : "")}
+                  />
+                  <label htmlFor="status-delivered">Delivered</label>
+                </div>
+                <div className="checkbox-input">
+                  <input
+                    type="checkbox"
+                    id="status-failed"
+                    checked={statusFilter === "Failed"}
+                    onChange={(e) => setStatusFilter(e.target.checked ? "Failed" : "")}
+                  />
+                  <label htmlFor="status-failed">Failed</label>
+                </div>
               </div>
             </div>
             
             <div className="filter-group">
-              <label>Attachments</label>
+              <label>Has Attachments</label>
               <div className="checkbox-input">
                 <input
                   type="checkbox"
-                  id="hasAttachments"
+                  id="has-attachments"
                   checked={hasAttachmentFilter}
                   onChange={(e) => setHasAttachmentFilter(e.target.checked)}
                 />
-                <label htmlFor="hasAttachments">Has Attachments</label>
+                <label htmlFor="has-attachments">With Attachments</label>
               </div>
             </div>
             
             <div className="filter-group labels-filter">
               <label>Labels</label>
               <div className="labels-container">
-                {allLabels.map(label => (
-                  <div 
-                    key={label}
-                    className={`label-chip ${selectedLabels.includes(label) ? 'selected' : ''}`}
-                    onClick={() => toggleLabelFilter(label)}
+                {Object.values(labelMetadata).map((label) => (
+                  <div
+                    key={label.id}
+                    className={`label-chip ${selectedLabels.includes(label.id) ? 'selected' : ''}`}
+                    onClick={() => toggleLabelFilter(label.id)}
+                    style={
+                      selectedLabels.includes(label.id) && label.color
+                        ? {
+                            backgroundColor: label.color.backgroundColor || '#4a6cf7',
+                            color: label.color.textColor || 'white',
+                          }
+                        : {}
+                    }
                   >
-                    {label}
+                    {label.name}
                   </div>
                 ))}
               </div>
@@ -550,188 +547,173 @@ const InboundMails = () => {
           </div>
         </div>
       )}
-
+      
+      {/* Removing the search-filter-panel with search bar and blue refresh button */}
+      
       <div className="mails-table-container">
         <table className="table">
           <thead>
             <tr>
-              <th>Date/Time (UTC)</th>
-              <th>Sender</th>
+              <th>Date</th>
+              <th>Recipient</th>
               <th>Subject</th>
               <th>Status</th>
               <th>Size</th>
               <th>Labels</th>
-              {/* Actions column removed */}
             </tr>
           </thead>
           <tbody>
-            {currentItems.map((mail, index) => (
-              <tr 
-                key={index} 
-                className={mail.status === "Unread" ? "unread" : ""}
-                onClick={() => handleEmailClick(mail)}
-                style={{ cursor: 'pointer' }}
-              >
-                <td>{mail.dateUTC}</td>
-                <td>
-                  <div className="sender-info">
-                    <div className="sender-name">{mail.sender}</div>
-                    {mail.senderEmail && mail.sender !== mail.senderEmail && (
-                      <div className="sender-email">{mail.senderEmail}</div>
-                    )}
-                  </div>
-                </td>
-                <td>{mail.subject}</td>
-                <td>
-                  <div className="status-container">
-                    <span className={`status-badge ${mail.status.toLowerCase()}`}>
-                      {mail.status}
-                    </span>
-                    {mail.hasAttachments && (
-                      <span className="attachment-badge">
-                        <Paperclip size={14} />
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td>{mail.size}</td>
-                <td>
-                  <div className="labels-container">
-                    {mail.labels.map((label, i) => {
-                      const labelId = label.id || label;
-                      const labelName = label.name || label;
-                      const metadata = labelMetadata[labelId];
-                      
-                      // Default styling
-                      let style = {
-                        backgroundColor: "#e5e7eb", // gray-200
-                        color: "#374151", // gray-700
-                      };
-                      
-                      // Apply custom styling if available
-                      if (metadata?.color) {
-                        style = {
-                          backgroundColor: metadata.color.backgroundColor || style.backgroundColor,
-                          color: metadata.color.textColor || style.color,
-                        };
-                      } else {
-                        // Apply predefined styles for system labels
-                        switch (labelName) {
-                          case "INBOX":
-                            style = { backgroundColor: "#dbeafe", color: "#1e40af" }; // blue
-                            break;
-                          case "SENT":
-                            style = { backgroundColor: "#dcfce7", color: "#166534" }; // green
-                            break;
-                          case "IMPORTANT":
-                            style = { backgroundColor: "#fee2e2", color: "#b91c1c" }; // red
-                            break;
-                          case "STARRED":
-                            style = { backgroundColor: "#fef3c7", color: "#92400e" }; // amber
-                            break;
-                          case "DRAFT":
-                            style = { backgroundColor: "#f3e8ff", color: "#6b21a8" }; // purple
-                            break;
-                          case "SPAM":
-                            style = { backgroundColor: "#ffedd5", color: "#c2410c" }; // orange
-                            break;
-                          case "TRASH":
-                            style = { backgroundColor: "#f3f4f6", color: "#4b5563" }; // gray
-                            break;
-                          case "UNREAD":
-                            style = { backgroundColor: "#e0f2fe", color: "#0369a1" }; // light blue
-                            break;
-                          case "CATEGORY_PERSONAL":
-                            style = { backgroundColor: "#dbeafe", color: "#1e40af" }; // blue
-                            break;
-                          case "CATEGORY_SOCIAL":
-                            style = { backgroundColor: "#fae8ff", color: "#86198f" }; // pink
-                            break;
-                          case "CATEGORY_PROMOTIONS":
-                            style = { backgroundColor: "#fef9c3", color: "#854d0e" }; // yellow
-                            break;
-                          case "CATEGORY_UPDATES":
-                            style = { backgroundColor: "#d1fae5", color: "#065f46" }; // emerald
-                            break;
-                          case "CATEGORY_FORUMS":
-                            style = { backgroundColor: "#e0e7ff", color: "#3730a3" }; // indigo
-                            break;
-                        }
-                      }
-                      
-                      return (
-                        <span 
-                          key={i} 
-                          className="label-badge"
-                          style={style}
-                          title={metadata?.type === 'system' ? `System: ${labelName}` : labelName}
-                        >
-                          {labelName.replace(/^CATEGORY_/, '')}
-                        </span>
-                      );
-                    })}
-                  </div>
+            {currentItems.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>
+                  No outbound emails found.
                 </td>
               </tr>
-            ))}
+            ) : (
+              currentItems.map((mail, index) => (
+                <tr 
+                  key={index} 
+                  onClick={() => handleEmailClick(mail)}
+                >
+                  <td>{mail.dateFormatted}</td>
+                  <td>
+                    <div className="sender-info">
+                      <div className="sender-name">{mail.recipient}</div>
+                      {mail.recipientEmail && mail.recipient !== mail.recipientEmail && (
+                        <div className="sender-email">{mail.recipientEmail}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td>{mail.subject}</td>
+                  <td>
+                    <div className="status-container">
+                      <span className={`status-badge ${mail.status.toLowerCase()}`}>
+                        {mail.status}
+                      </span>
+                      {mail.hasAttachments && (
+                        <span className="attachment-badge" title="Has attachments">
+                          <Paperclip size={14} />
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td>{mail.size}</td>
+                  <td>
+                    <div className="status-container">
+                      {mail.labels && mail.labels.map((label, i) => {
+                        const labelId = typeof label === 'object' ? label.id : label;
+                        const labelName = typeof label === 'object' ? label.name : label;
+                        const metadata = labelMetadata[labelId];
+                        
+                        // Default styling
+                        let style = {
+                          backgroundColor: "#e5e7eb", // gray-200
+                          color: "#374151", // gray-700
+                        };
+                        
+                        // Apply custom styling if available
+                        if (metadata?.color) {
+                          style = {
+                            backgroundColor: metadata.color.backgroundColor || style.backgroundColor,
+                            color: metadata.color.textColor || style.color,
+                          };
+                        } else {
+                          // Apply predefined styles for system labels
+                          switch (labelName) {
+                            case "INBOX":
+                              style = { backgroundColor: "#dbeafe", color: "#1e40af" }; // blue
+                              break;
+                            case "SENT":
+                              style = { backgroundColor: "#dcfce7", color: "#166534" }; // green
+                              break;
+                            case "IMPORTANT":
+                              style = { backgroundColor: "#fee2e2", color: "#b91c1c" }; // red
+                              break;
+                            case "STARRED":
+                              style = { backgroundColor: "#fef3c7", color: "#92400e" }; // amber
+                              break;
+                            case "DRAFT":
+                              style = { backgroundColor: "#f3e8ff", color: "#6b21a8" }; // purple
+                              break;
+                            case "SPAM":
+                              style = { backgroundColor: "#ffedd5", color: "#c2410c" }; // orange
+                              break;
+                            case "TRASH":
+                              style = { backgroundColor: "#f3f4f6", color: "#4b5563" }; // gray
+                              break;
+                            default:
+                              break;
+                          }
+                        }
+                        
+                        return (
+                          <span 
+                            key={i} 
+                            className="status-badge"
+                            style={style}
+                          >
+                            {labelName}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
       
-      {/* Pagination */}
-      <div className="pagination-container">
-        <div className="pagination-info">
-          Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredMails.length)} of {filteredMails.length} emails
-        </div>
-        <div className="pagination-buttons">
-          <button 
-            className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
-            onClick={() => setCurrentPage(prev => prev - 1)}
-            disabled={currentPage === 1}
-          >
-            &lt;
-          </button>
-          <span className="current-page">{currentPage}</span>
-          <button 
-            className={`pagination-btn ${currentPage === totalPages ? 'disabled' : ''}`}
-            onClick={() => setCurrentPage(prev => prev + 1)}
-            disabled={currentPage === totalPages}
-          >
-            &gt;
-          </button>
-        </div>
+      {/* Pagination controls */}
+      <div className="pagination-controls">
+        <button 
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="pagination-button"
+        >
+          <ChevronLeft size={16} />
+          Previous
+        </button>
+        
+        <span className="pagination-info">
+          Page {currentPage} of {totalPages || 1}
+        </span>
+        
+        <button 
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages || totalPages === 0}
+          className="pagination-button"
+        >
+          Next
+          <ChevronRight size={16} />
+        </button>
       </div>
-
-      {/* Email Detail Modal */}
-      {showModal && (
+      
+      {/* Email detail modal */}
+      {showModal && selectedEmailContent && (
         <div className="email-modal-overlay">
           <div className="email-modal">
             <div className="email-modal-header">
-              <h3>{selectedEmailContent?.subject || "Email Details"}</h3>
-              <button
-                onClick={closeModal}
-                className="close-modal-btn"
-              >
+              <h2>Email Details</h2>
+              <button className="close-modal-button" onClick={closeModal}>
                 <X size={20} />
               </button>
             </div>
             <div className="email-modal-content">
-              {detailLoading ? (
-                <div className="loading-spinner">Loading email content...</div>
-              ) : selectedEmailContent ? (
-                <EmailDetail 
-                  emailContent={selectedEmailContent}
-                  folder="inbox"
-                />
-              ) : (
-                <div className="loading-spinner">No email content available</div>
-              )}
+              <EmailDetail email={selectedEmailContent} />
             </div>
           </div>
+        </div>
+      )}
+      
+      {detailLoading && (
+        <div className="loading-spinner">
+          Loading email content...
         </div>
       )}
     </div>
   );
 };
 
-export default InboundMails;
+export default OutboundMails;
