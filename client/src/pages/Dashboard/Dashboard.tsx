@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import EmailList from "../../components/EmailList";
-import EmailDetail from "../../components/EmailDetail";
+import EmailList from "../../components/EmailList/EmailList";
+import EmailDetail from "../../components/EmailDetail/EmailDetail";
+import AnalyticsDashboard from "../../components/Analytics/AnalyticsDasboard";
 import { useAuth } from "../../context/AuthContext";
-import type { EmailContent } from "../../components/EmailDetail";
+import type { EmailContent } from "../../components/EmailDetail/EmailDetail";
 import "./Dashboard.css";
 
 const Dashboard = () => {
@@ -152,43 +153,7 @@ const Dashboard = () => {
             
             {/* Only show stats and charts on the main dashboard view */}
             {view === "dashboard" && (
-              <>
-                <div className="stats-cards">
-                  <div className="stat-card">
-                    <h3>Total Messages Received</h3>
-                    <div className="stat-value">150</div>
-                    <div className="stat-subtext">this month</div>
-                  </div>
-                  <div className="stat-card">
-                    <h3>Messages Sent</h3>
-                    <div className="stat-value">243</div>
-                  </div>
-                  <div className="stat-card">
-                    <h3>Pending Messages</h3>
-                    <div className="stat-value">6</div>
-                    <div className="stat-subtext">scheduled or awaiting reply</div>
-                  </div>
-                  <div className="stat-card">
-                    <h3>Response Time Average</h3>
-                    <div className="stat-value">2.5 hrs</div>
-                    <div className="stat-subtext">average reply time</div>
-                  </div>
-                </div>
-
-                <section className="insights-section">
-                  <h2>Insights and Analytics</h2>
-                  <div className="charts-container">
-                    <div className="chart-box">
-                      <h3>Message Volume Over Time</h3>
-                      <div className="chart-placeholder"></div>
-                    </div>
-                    <div className="chart-box">
-                      <h3>Response Rate Distribution</h3>
-                      <div className="chart-placeholder pie-chart"></div>
-                    </div>
-                  </div>
-                </section>
-              </>
+              <AnalyticsDashboard />
             )}
             
             {/* Show email list for inbox and sentbox views */}

@@ -690,28 +690,37 @@ const OutboundMails = () => {
         </button>
       </div>
       
-      {/* Email detail modal */}
+      {/* Email detail modal - updated to match InboundMails implementation */}
       {showModal && selectedEmailContent && (
         <div className="email-modal-overlay">
           <div className="email-modal">
             <div className="email-modal-header">
-              <h2>Email Details</h2>
-              <button className="close-modal-button" onClick={closeModal}>
+              <h3>{selectedEmailContent?.subject || "Email Details"}</h3>
+              <button
+                onClick={closeModal}
+                className="close-modal-btn"
+              >
                 <X size={20} />
               </button>
             </div>
             <div className="email-modal-content">
-              <EmailDetail email={selectedEmailContent} />
+              {detailLoading ? (
+                <div className="loading-spinner">Loading email content...</div>
+              ) : selectedEmailContent ? (
+                <EmailDetail 
+                  emailContent={selectedEmailContent}
+                  folder="sent"
+                  onClose={closeModal}
+                />
+              ) : (
+                <div className="loading-spinner">No email content available</div>
+              )}
             </div>
           </div>
         </div>
       )}
-      
-      {detailLoading && (
-        <div className="loading-spinner">
-          Loading email content...
-        </div>
-      )}
+
+      {/* Removed the duplicate loading spinner that was here */}
     </div>
   );
 };

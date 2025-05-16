@@ -172,6 +172,11 @@ npm run dev
 
 1. Make changes to the code
 2. Test your changes locally
+   ```bash
+   # Run all applications (server, client, admin) concurrently
+   cd server
+   npm run dev:all
+   ```
 3. Build the applications for production:
    ```bash
    # In each directory (server, client, admin)

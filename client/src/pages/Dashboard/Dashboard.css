@@ -380,3 +380,33 @@
   width: 100%;
 }
 
+/* Add these styles for the analytics dashboard */
+.bg-purple-50 {
+  background-color: #faf5ff;
+}
+
+.text-purple-600 {
+  color: #9333ea;
+}
+
+.border-gray-100 {
+  border-color: #f3f4f6;
+}
+
+.text-gray-400 {
+  color: #9ca3af;
+}
+
+.bg-blue-500 {
+  background-color: #5B67F0;
+}
+
+.bg-yellow-400 {
+  background-color: #F0D15B;
+}
+
+.bg-red-500 {
+  background-color: #F05B5B;
+}
+
+
