@@ -182,42 +182,70 @@ export const fetchEmailDetail = async (req, res) => {
 // Controller for /email/fetch (list view)
 export const fetchEmails = async (req, res) => {
   try {
-    const uid = req.user.uid;
-    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+    const userId = req.user.uid;
     
-    if (!tokenDoc.exists) {
-      // Check if user has a different UID in the system based on their Gmail account
-      const userEmail = req.user.email;
-      if (userEmail) {
-        const existingTokensSnapshot = await db.collection("oauth_tokens")
-          .where("gmail_email", "==", userEmail)
-          .get();
-        
-        if (!existingTokensSnapshot.empty) {
-          const existingDoc = existingTokensSnapshot.docs[0];
-          // Use the existing token instead
-          const tokenData = existingDoc.data();
-          
-          // Set up Gmail client with the found token
-          const auth = new google.auth.OAuth2();
-          auth.setCredentials({ access_token: tokenData.access_token });
-          const gmail = google.gmail({ version: "v1", auth });
-          
-          // Continue with email fetching using this token
-          return await processEmailFetch(req, res, gmail);
-        }
-      }
-      
-      return res.status(404).json({ error: "No tokens found" });
+    // Get user's OAuth token
+    const tokenDoc = await db.collection("oauth_tokens").doc(userId).get();
+    
+    if (!tokenDoc.exists || !tokenDoc.data()?.access_token) {
+      return res.status(404).json({ error: "No Google token found for this user" });
+    }
+    
+    const userData = tokenDoc.data();
+    
+    if (!userData.access_token) {
+      console.log("No access token found for user:", userId);
+      return res.status(400).json({ error: "No access token available" });
+    }
+    
+    console.log("Found access token for user:", userId);
+    
+    // Set up Gmail API with user's token
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({ access_token: userData.access_token });
+    
+    const gmail = google.gmail({ version: 'v1', auth });
+    
+    // Get folder/label from query params
+    const folder = req.query.folder || 'INBOX';
+    const label = req.query.label;
+    
+    console.log("Fetching from folder:", folder);
+    if (label) console.log("With label:", label);
+    
+    // Determine which labels to use
+    const labelIds = [folder];
+    if (label && label !== folder) {
+      labelIds.push(label);
+    }
+    
+    const pageToken = req.query.pageToken || null;
+    if (pageToken) console.log("Using page token:", pageToken);
+
+    // Fetch messages from Gmail
+    const { messages, nextPageToken } = await fetchMessagesFromFolder(
+      gmail,
+      labelIds,
+      20,
+      pageToken
+    );
+    
+    console.log(`Found ${messages?.length || 0} messages`);
+    
+    if (!messages || messages.length === 0) {
+      return res.json({ emails: [], nextPageToken: null });
     }
 
-    oauthClient.setCredentials(tokenDoc.data());
-    const gmail = google.gmail({ version: "v1", auth: oauthClient });
+    // Fetch detailed metadata for each message
+    const metadataPromises = messages.map((m) => fetchEmailMetadata(gmail, m.id));
+    const detailedMessages = await Promise.all(metadataPromises);
     
-    await processEmailFetch(req, res, gmail);
+    console.log(`Processed ${detailedMessages.length} detailed messages`);
+    
+    res.json({ emails: detailedMessages, nextPageToken });
   } catch (error) {
-    console.error("Error in fetching emails:", error);
-    res.status(500).json({ error: "Error fetching emails" });
+    console.error("Error in processing emails:", error);
+    res.status(500).json({ error: "Error processing emails" });
   }
 };
 

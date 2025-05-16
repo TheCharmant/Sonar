@@ -59,7 +59,7 @@ const InboundMails = () => {
   useEffect(() => {
     if (!token) return;
     fetchInboundEmails();
-    fetchLabelMetadata();
+    // fetchLabelMetadata(); // Removed
   }, [token]);
 
   const fetchInboundEmails = async () => {
@@ -257,32 +257,32 @@ const InboundMails = () => {
   };
 
   // Add this function to fetch label metadata
-  const fetchLabelMetadata = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/email/admin/labels`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to fetch label metadata");
-      }
-
-      const { labels } = await res.json();
-      
-      // Convert array to object for easier lookup
-      const labelMap = {};
-      labels.forEach(label => {
-        labelMap[label.id] = label;
-      });
-      
-      setLabelMetadata(labelMap);
-    } catch (err) {
-      console.error("Error fetching label metadata:", err);
-    }
-  };
+  // const fetchLabelMetadata = async () => {
+  //   try {
+  //     const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/email/admin/labels`, {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     });
+  //
+  //     if (!res.ok) {
+  //       const data = await res.json();
+  //       throw new Error(data.error || "Failed to fetch label metadata");
+  //     }
+  //
+  //     const { labels } = await res.json();
+  //     
+  //     // Convert array to object for easier lookup
+  //     const labelMap = {};
+  //     labels.forEach(label => {
+  //       labelMap[label.id] = label;
+  //     });
+  //     
+  //     setLabelMetadata(labelMap);
+  //   } catch (err) {
+  //     console.error("Error fetching label metadata:", err);
+  //   }
+  // };
 
   if (role !== "admin") return <p className="p-6 text-red-500">Access denied. Admins only.</p>;
   if (loading) return (

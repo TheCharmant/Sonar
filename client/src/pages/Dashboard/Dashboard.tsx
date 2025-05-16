@@ -6,23 +6,48 @@ import { useAuth } from "../../context/AuthContext";
 import type { EmailContent } from "../../components/EmailDetail";
 
 const Dashboard = () => {
-  const { token, setToken } = useAuth();
+  const { token, setToken, checkUserStatus } = useAuth();
   const navigate = useNavigate();
+  const [, setIsLoading] = useState(false);
 
   // Check for token in URL and in auth context
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get("token");
 
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-      // Remove token from URL to prevent it from being visible
-      navigate("/dashboard", { replace: true });
-    } else if (!token) {
-      // If no token in URL and no token in context, redirect to login
-      navigate("/");
-    }
-  }, [token, navigate, setToken]);
+    const verifyUserStatus = async () => {
+      setIsLoading(true);
+      
+      if (tokenFromUrl) {
+        console.log("Found token in URL, setting it");
+        setToken(tokenFromUrl);
+        // Remove token from URL to prevent it from being visible
+        navigate("/dashboard", { replace: true });
+        // Wait a moment for the token to be set
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } else if (!token) {
+        // If no token in URL and no token in context, redirect to login
+        console.log("No token found, redirecting to login");
+        setIsLoading(false);
+        navigate("/");
+        return;
+      }
+      
+      // Check if user account is active
+      console.log("Checking user status");
+      const isActive = await checkUserStatus();
+      setIsLoading(false);
+      
+      if (!isActive) {
+        console.log("User is not active, redirecting to login");
+        navigate("/login?error=Your+account+has+been+deactivated.+Please+contact+an+administrator.&code=account_deactivated");
+      } else {
+        console.log("User is active, staying on dashboard");
+      }
+    };
+    
+    verifyUserStatus();
+  }, [token, navigate, setToken, checkUserStatus]);
 
   const [view, setView] = useState<"inbox" | "sent">("inbox");
   const [currentScreen, setCurrentScreen] = useState<"list" | "detail">("list");

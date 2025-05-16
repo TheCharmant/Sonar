@@ -39,6 +39,8 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setDeactivatedError(false);
+    // Clear any existing tokens that might be invalid
+    localStorage.removeItem("token");
     try {
       const uid = uuid(); // temporary unique session
       const url = await getAuthUrl(uid);
