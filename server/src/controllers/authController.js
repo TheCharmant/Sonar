@@ -261,8 +261,19 @@ export const oauthCallback = async (req, res) => {
       last_updated: new Date().toISOString()
     });
     
-    const newToken = generateToken(uid);
-    
+    const newToken = jwt.sign(
+      { 
+        uid: uid,
+        email: email,
+        name: name || '',
+        role: 'user'
+      }, 
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    console.log("Generated new token:", newToken.substring(0, 10) + "...");
+
     // Create a single audit log for the login or signup
     await createAuditLog({
       type: AuditLogTypes.AUTH,

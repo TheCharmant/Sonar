@@ -48,7 +48,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedEmailContent, setSelectedEmailContent] = useState<EmailContent | null>(null);
-  const [labels, setLabels] = useState<Label[]>([]);
+  const [, setLabels] = useState<Label[]>([]);
 
   // Add interface for Label
   interface Label {
@@ -92,6 +92,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
 
     const fetchInitial = async () => {
       try {
+        setLoading(true);
         const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
         url.searchParams.set("folder", folder.toUpperCase());
         
@@ -106,9 +107,18 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) throw new Error("Failed to load emails");
+        const data = await res.json();
+        
+        if (!res.ok) {
+          if (data.error === "No Google token found for this user") {
+            setError("Please connect your Google account to view emails");
+            // You might want to redirect to a setup page or show a connect button
+          } else {
+            throw new Error(data.error || "Failed to load emails");
+          }
+          return;
+        }
 
-        const data: EmailResponse = await res.json();
         setEmails(data.emails);
         setNextPageToken(data.nextPageToken || null);
       } catch (err) {

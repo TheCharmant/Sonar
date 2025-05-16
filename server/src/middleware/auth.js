@@ -1,6 +1,6 @@
+import jwt from 'jsonwebtoken';
 import { auth, db } from '../config/firebase.js';
 
-// Middleware to check if the user is authenticated
 export const isAuthenticated = async (req, res, next) => {
   try {
     // Get the token from the Authorization header
@@ -11,33 +11,29 @@ export const isAuthenticated = async (req, res, next) => {
     }
     
     const token = authHeader.split(' ')[1];
+    console.log("Authenticating with token:", token.substring(0, 10) + "...");
     
-    // Check if this is a Firebase token or a custom JWT
-    if (token.includes('.') && token.split('.').length === 3) {
+    let decodedToken;
+    
+    // Try JWT first, then Firebase
+    try {
+      const secret = process.env.JWT_SECRET || 'your-secret-key';
+      decodedToken = jwt.verify(token, secret);
+      console.log("JWT verification successful");
+    } catch (jwtError) {
+      console.log("JWT verification failed, trying Firebase:", jwtError.message);
+      
       try {
-        // Try to verify as a Firebase token first
-        const decodedToken = await auth.verifyIdToken(token);
-        req.user = decodedToken;
+        decodedToken = await auth.verifyIdToken(token);
+        console.log("Firebase verification successful");
       } catch (firebaseError) {
-        console.log("Firebase token verification failed, trying custom JWT verification");
-        
-        // If Firebase verification fails, try custom JWT verification
-        try {
-          // This is where you would verify your custom JWT
-          // For example, using jsonwebtoken library
-          const jwt = require('jsonwebtoken');
-          const secret = process.env.JWT_SECRET || 'your-secret-key';
-          
-          const decoded = jwt.verify(token, secret);
-          req.user = decoded;
-        } catch (jwtError) {
-          console.error("JWT verification failed:", jwtError);
-          return res.status(401).json({ error: 'Unauthorized - Invalid token' });
-        }
+        console.error("Firebase verification failed:", firebaseError.message);
+        return res.status(401).json({ error: 'Unauthorized - Invalid token' });
       }
-    } else {
-      return res.status(401).json({ error: 'Unauthorized - Invalid token format' });
     }
+    
+    // Set user info in request
+    req.user = decodedToken;
     
     // Check if user is active
     try {
