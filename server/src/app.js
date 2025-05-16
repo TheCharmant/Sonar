@@ -65,6 +65,12 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auditlogs", auditLogRoutes);
 
+// Add this after registering all routes
+app.use((req, res, next) => {
+  console.log(`Request received: ${req.method} ${req.path}`);
+  next();
+});
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -85,9 +91,10 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 404 handler
-app.use((req, res, next) => {
-  res.status(404).json({ error: 'Not Found', path: req.path });
+// Add a catch-all route to handle 404s
+app.use((req, res) => {
+  console.log(`Route not found: ${req.method} ${req.path}`);
+  res.status(404).json({ error: "Not Found", path: req.path });
 });
 
 // Error handling middleware

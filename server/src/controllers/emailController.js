@@ -4,6 +4,44 @@ import { db } from "../config/firebase.js";
 import { oauthClient } from "../config/oauth.js";
 import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
 
+const refreshTokenIfNeeded = async (uid) => {
+  try {
+    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+    
+    if (!tokenDoc.exists) return null;
+    
+    const tokenData = tokenDoc.data();
+    
+    // Check if token is expired or about to expire (5 min buffer)
+    const isExpired = !tokenData.expiry_date || 
+                      new Date().getTime() > tokenData.expiry_date - (5 * 60 * 1000);
+    
+    if (isExpired && tokenData.refresh_token) {
+      console.log(`Token expired for user ${uid}, refreshing...`);
+      
+      // Set credentials and refresh
+      oauthClient.setCredentials({
+        refresh_token: tokenData.refresh_token
+      });
+      
+      const { tokens } = await oauthClient.refreshToken(tokenData.refresh_token);
+      
+      // Update token in database
+      await db.collection("oauth_tokens").doc(uid).update({
+        access_token: tokens.access_token,
+        expiry_date: tokens.expiry_date
+      });
+      
+      return tokens;
+    }
+    
+    return tokenData;
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    return null;
+  }
+};
+
 // Fetch message IDs with optional pagination
 const fetchMessagesFromFolder = async (gmail, folder, maxResults = 20, pageToken = null) => {
   const response = await gmail.users.messages.list({
@@ -73,13 +111,24 @@ export const fetchEmailDetail = async (req, res) => {
       
       if (userId) {
         // If userId is provided, use that
-        tokenDoc = await db.collection("oauth_tokens").doc(userId).get();
-        if (tokenDoc.exists) {
+        const refreshedTokens = await refreshTokenIfNeeded(userId);
+        if (refreshedTokens) {
+          tokenDoc = { exists: true, data: () => refreshedTokens };
           ownerUid = userId;
           // Get the owner's email if possible
           const userData = await db.collection("users").doc(userId).get();
           if (userData.exists) {
             ownerEmail = userData.data().email || userId;
+          }
+        } else {
+          tokenDoc = await db.collection("oauth_tokens").doc(userId).get();
+          if (tokenDoc.exists) {
+            ownerUid = userId;
+            // Get the owner's email if possible
+            const userData = await db.collection("users").doc(userId).get();
+            if (userData.exists) {
+              ownerEmail = userData.data().email || userId;
+            }
           }
         }
       } else {
@@ -117,8 +166,13 @@ export const fetchEmailDetail = async (req, res) => {
         }
       });
     } else {
-      // For regular users, just get their own token
-      tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+      // For regular users, refresh their token if needed
+      const refreshedTokens = await refreshTokenIfNeeded(uid);
+      if (refreshedTokens) {
+        tokenDoc = { exists: true, data: () => refreshedTokens };
+      } else {
+        tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+      }
       
       // Log user reading their own email
       await createAuditLog({
@@ -182,70 +236,54 @@ export const fetchEmailDetail = async (req, res) => {
 // Controller for /email/fetch (list view)
 export const fetchEmails = async (req, res) => {
   try {
-    const userId = req.user.uid;
+    const uid = req.user.uid;
     
-    // Get user's OAuth token
-    const tokenDoc = await db.collection("oauth_tokens").doc(userId).get();
+    // Try to refresh token if needed
+    const refreshedTokens = await refreshTokenIfNeeded(uid);
     
-    if (!tokenDoc.exists || !tokenDoc.data()?.access_token) {
-      return res.status(404).json({ error: "No Google token found for this user" });
+    if (refreshedTokens) {
+      // Use refreshed tokens
+      oauthClient.setCredentials(refreshedTokens);
+      const gmail = google.gmail({ version: "v1", auth: oauthClient });
+      return await processEmailFetch(req, res, gmail);
     }
     
-    const userData = tokenDoc.data();
+    // Original token retrieval logic
+    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
     
-    if (!userData.access_token) {
-      console.log("No access token found for user:", userId);
-      return res.status(400).json({ error: "No access token available" });
-    }
-    
-    console.log("Found access token for user:", userId);
-    
-    // Set up Gmail API with user's token
-    const auth = new google.auth.OAuth2();
-    auth.setCredentials({ access_token: userData.access_token });
-    
-    const gmail = google.gmail({ version: 'v1', auth });
-    
-    // Get folder/label from query params
-    const folder = req.query.folder || 'INBOX';
-    const label = req.query.label;
-    
-    console.log("Fetching from folder:", folder);
-    if (label) console.log("With label:", label);
-    
-    // Determine which labels to use
-    const labelIds = [folder];
-    if (label && label !== folder) {
-      labelIds.push(label);
-    }
-    
-    const pageToken = req.query.pageToken || null;
-    if (pageToken) console.log("Using page token:", pageToken);
-
-    // Fetch messages from Gmail
-    const { messages, nextPageToken } = await fetchMessagesFromFolder(
-      gmail,
-      labelIds,
-      20,
-      pageToken
-    );
-    
-    console.log(`Found ${messages?.length || 0} messages`);
-    
-    if (!messages || messages.length === 0) {
-      return res.json({ emails: [], nextPageToken: null });
+    if (!tokenDoc.exists) {
+      // Check if user has a different UID in the system based on their Gmail account
+      const userEmail = req.user.email;
+      if (userEmail) {
+        const existingTokensSnapshot = await db.collection("oauth_tokens")
+          .where("gmail_email", "==", userEmail)
+          .get();
+        
+        if (!existingTokensSnapshot.empty) {
+          const existingDoc = existingTokensSnapshot.docs[0];
+          // Use the existing token instead
+          const tokenData = existingDoc.data();
+          
+          // Set up Gmail client with the found token
+          const auth = new google.auth.OAuth2();
+          auth.setCredentials({ access_token: tokenData.access_token });
+          const gmail = google.gmail({ version: "v1", auth });
+          
+          // Continue with email fetching using this token
+          return await processEmailFetch(req, res, gmail);
+        }
+      }
+      
+      return res.status(404).json({ error: "No tokens found" });
     }
 
-    // Fetch detailed metadata for each message
-    const metadataPromises = messages.map((m) => fetchEmailMetadata(gmail, m.id));
-    const detailedMessages = await Promise.all(metadataPromises);
+    oauthClient.setCredentials(tokenDoc.data());
+    const gmail = google.gmail({ version: "v1", auth: oauthClient });
     
-    console.log(`Processed ${detailedMessages.length} detailed messages`);
-    
-    res.json({ emails: detailedMessages, nextPageToken });
+    await processEmailFetch(req, res, gmail);
   } catch (error) {
-    console.error("Error in processing emails:", error);
-    res.status(500).json({ error: "Error processing emails" });
+    console.error("Error in fetching emails:", error);
+    res.status(500).json({ error: "Failed to fetch emails" });
   }
 };
 

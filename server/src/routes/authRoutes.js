@@ -1,6 +1,6 @@
 import express from "express";
-import { googleLogin, oauthCallback } from "../controllers/authController.js";
-import { isAuthenticated } from '../middleware/auth.js';
+import { googleLogin, oauthCallback, validateToken } from "../controllers/authController.js";
+import { isAuthenticated, verifyJWT } from '../middleware/auth.js';
 import { db } from '../config/firebase.js';
 import { auth } from '../config/firebase.js';
 import jwt from 'jsonwebtoken';
@@ -9,6 +9,7 @@ const router = express.Router();
 
 router.post("/google", googleLogin);
 router.get("/callback", oauthCallback);
+router.get("/validate-token", isAuthenticated, validateToken);
 
 // Add this route to check user status
 router.get('/check-status', async (req, res) => {

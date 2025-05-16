@@ -314,3 +314,55 @@ export const oauthCallback = async (req, res) => {
     return res.status(500).json({ error: "OAuth callback error" });
   }
 };
+
+// Make sure this function is exported
+export const validateToken = async (req, res) => {
+  try {
+    // If the request made it past the auth middleware, the token is valid
+    // We can do additional checks here if needed
+    
+    // Check if the OAuth token is still valid
+    const uid = req.user.uid;
+    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+    
+    if (!tokenDoc.exists) {
+      return res.status(401).json({ error: "OAuth token not found" });
+    }
+    
+    const tokenData = tokenDoc.data();
+    
+    // Check if token is expired
+    if (!tokenData.expiry_date || new Date().getTime() > tokenData.expiry_date) {
+      // Try to refresh the token if we have a refresh token
+      if (tokenData.refresh_token) {
+        try {
+          oauthClient.setCredentials({
+            refresh_token: tokenData.refresh_token
+          });
+          
+          const { tokens } = await oauthClient.refreshToken(tokenData.refresh_token);
+          
+          // Update token in database
+          await db.collection("oauth_tokens").doc(uid).update({
+            access_token: tokens.access_token,
+            expiry_date: tokens.expiry_date
+          });
+          
+          // Token refreshed successfully
+          return res.status(200).json({ valid: true, refreshed: true });
+        } catch (refreshError) {
+          console.error("Error refreshing token:", refreshError);
+          return res.status(401).json({ error: "Failed to refresh token" });
+        }
+      } else {
+        return res.status(401).json({ error: "Token expired and no refresh token available" });
+      }
+    }
+    
+    // Token is valid
+    return res.status(200).json({ valid: true });
+  } catch (error) {
+    console.error("Error validating token:", error);
+    res.status(500).json({ error: "Failed to validate token" });
+  }
+};

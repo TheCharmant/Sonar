@@ -84,11 +84,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Initialize token from localStorage on mount
+  // Add this function to validate the token
+  const validateStoredToken = async (storedToken: string) => {
+    try {
+      console.log("Validating stored token...");
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/validate-token`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${storedToken}`
+        }
+      });
+      
+      if (response.ok) {
+        // Token is valid, set it in state
+        console.log("Token is valid");
+        setTokenState(storedToken);
+      } else {
+        // Token is invalid, clear it
+        console.log("Stored token is invalid, clearing");
+        localStorage.removeItem("token");
+        setTokenState("");
+      }
+    } catch (error) {
+      console.error("Error validating token:", error);
+      localStorage.removeItem("token");
+      setTokenState("");
+    }
+  };
+
+  // Add this to debug the API URL
+  useEffect(() => {
+    console.log("Backend URL:", import.meta.env.VITE_BACKEND_URL);
+  }, []);
+
+  // Update the useEffect to use this function
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
-      setTokenState(storedToken);
+      validateStoredToken(storedToken);
+    } else {
+      setTokenState("");
     }
   }, []);
 
