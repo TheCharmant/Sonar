@@ -37,9 +37,10 @@ interface EmailResponse {
 interface EmailListProps {
   folder: "inbox" | "sent";
   onSelectEmail?: (email: EmailContent) => void;
+  onError?: (message: string) => void;
 }
 
-const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
+const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
   const { token } = useAuth();
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,6 +94,8 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
     const fetchInitial = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
         const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
         url.searchParams.set("folder", folder.toUpperCase());
         
@@ -107,29 +110,33 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const data = await res.json();
-        
-        if (!res.ok) {
-          if (data.error === "No Google token found for this user") {
-            setError("Please connect your Google account to view emails");
-            // You might want to redirect to a setup page or show a connect button
-          } else {
-            throw new Error(data.error || "Failed to load emails");
-          }
+        if (res.status === 401 || res.status === 403) {
+          const errorMsg = "Your session has expired. Please log in again.";
+          setError(errorMsg);
+          if (onError) onError(errorMsg);
           return;
         }
 
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to load emails");
+        }
+
+        const data: EmailResponse = await res.json();
         setEmails(data.emails);
         setNextPageToken(data.nextPageToken || null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load emails");
+      } catch (error) {
+        console.error("Error fetching emails:", error);
+        const errorMsg = error instanceof Error ? error.message : "Failed to load emails";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
       } finally {
         setLoading(false);
       }
     };
 
     fetchInitial();
-  }, [token, folder]);
+  }, [token, folder, onError]);
 
   const loadMoreEmails = async () => {
     if (!nextPageToken) return;
@@ -144,13 +151,25 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error("Failed to load more emails");
+      if (res.status === 401 || res.status === 403) {
+        const errorMsg = "Your session has expired. Please log in again.";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to load more emails");
+      }
 
       const data: EmailResponse = await res.json();
       setEmails(prev => [...prev, ...data.emails]);
       setNextPageToken(data.nextPageToken || null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load more emails");
+      const errorMsg = err instanceof Error ? err.message : "Failed to load more emails";
+      setError(errorMsg);
+      if (onError) onError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -171,7 +190,17 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (!res.ok) throw new Error("Failed to load email");
+      if (res.status === 401 || res.status === 403) {
+        const errorMsg = "Your session has expired. Please log in again.";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to load email");
+      }
 
       const { email } = await res.json();
 
