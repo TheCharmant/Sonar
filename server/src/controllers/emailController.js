@@ -2,7 +2,6 @@
 import { google } from "googleapis";
 import { db } from "../config/firebase.js";
 import { oauthClient } from "../config/oauth.js";
-import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
 
 // Fetch message IDs with optional pagination
 const fetchMessagesFromFolder = async (gmail, folder, maxResults = 20, pageToken = null) => {
@@ -83,9 +82,7 @@ export const fetchEmailDetail = async (req, res) => {
 
     // If admin, we need to determine which user's email we're fetching
     let tokenDoc;
-    let ownerUid = uid;
-    let ownerEmail = userEmail;
-
+    
     if (isAdmin) {
       // For admins, we need to find which user owns this email
       // This could be passed as a query parameter
@@ -94,14 +91,6 @@ export const fetchEmailDetail = async (req, res) => {
       if (userId) {
         // If userId is provided, use that
         tokenDoc = await db.collection("oauth_tokens").doc(userId).get();
-        if (tokenDoc.exists) {
-          ownerUid = userId;
-          // Get the owner's email if possible
-          const userData = await db.collection("users").doc(userId).get();
-          if (userData.exists) {
-            ownerEmail = userData.data().email || userId;
-          }
-        }
       } else {
         // Otherwise, try to find any user with this email
         // This is less efficient but works for demo purposes
@@ -122,34 +111,9 @@ export const fetchEmailDetail = async (req, res) => {
           }
         }
       }
-
-      // Log admin viewing user's email
-      await createAuditLog({
-        type: AuditLogTypes.EMAIL,
-        action: AuditLogActions.EMAIL_READ,
-        performedBy: userEmail,
-        details: {
-          email_id: id,
-          user_email: ownerEmail,
-          user_id: ownerUid,
-          admin_action: true
-        },
-        targetUser: ownerUid
-      });
     } else {
       // For regular users, just get their own token
       tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
-
-      // Log user reading their own email
-      await createAuditLog({
-        type: AuditLogTypes.EMAIL,
-        action: AuditLogActions.EMAIL_READ,
-        performedBy: userEmail,
-        details: {
-          email_id: id,
-          role: "user"
-        }
-      });
     }
 
     if (!tokenDoc || !tokenDoc.exists) {
@@ -189,10 +153,7 @@ export const fetchEmailDetail = async (req, res) => {
 
     const emailBody = extractBody(message.payload);
 
-    res.json({
-      email: { ...message, body: emailBody },
-      ownerUid // Include the owner's UID for reference
-    });
+    res.json({ email: { ...message, body: emailBody } });
   } catch (error) {
     console.error('Error fetching email details:', error);
     res.status(500).json({ error: 'Failed to fetch email details' });
@@ -201,55 +162,13 @@ export const fetchEmailDetail = async (req, res) => {
 
 // Controller for /email/fetch (list view)
 export const fetchEmails = async (req, res) => {
-  try {
-    const uid = req.user.uid;
-    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+  const uid = req.user.uid;
+  const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+  if (!tokenDoc.exists) return res.status(404).json({ error: "No tokens found" });
 
-    if (!tokenDoc.exists) {
-      // Check if user has a different UID in the system based on their Gmail account
-      const userEmail = req.user.email;
-      if (userEmail) {
-        const existingTokensSnapshot = await db.collection("oauth_tokens")
-          .where("gmail_email", "==", userEmail)
-          .get();
+  oauthClient.setCredentials(tokenDoc.data());
+  const gmail = google.gmail({ version: "v1", auth: oauthClient });
 
-        if (!existingTokensSnapshot.empty) {
-          const existingDoc = existingTokensSnapshot.docs[0];
-          // Use the existing token instead
-          const tokenData = existingDoc.data();
-
-          // Set up Gmail client with the found token
-          const auth = new google.auth.OAuth2();
-          auth.setCredentials({ access_token: tokenData.access_token });
-          const gmail = google.gmail({ version: "v1", auth });
-
-          // Continue with email fetching using this token
-          return await processEmailFetch(req, res, gmail);
-        }
-      }
-
-      return res.status(404).json({ error: "No tokens found" });
-    }
-
-    oauthClient.setCredentials(tokenDoc.data());
-    const gmail = google.gmail({ version: "v1", auth: oauthClient });
-
-    await processEmailFetch(req, res, gmail);
-  } catch (error) {
-    console.error("Error in fetching emails:", error);
-    // Provide more detailed error message
-    const errorMessage = error.message || "Error fetching emails";
-    console.error("Detailed error:", errorMessage);
-    res.status(500).json({
-      error: "Error fetching emails",
-      message: errorMessage,
-      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
-    });
-  }
-};
-
-// Helper function to process email fetching
-const processEmailFetch = async (req, res, gmail) => {
   // Get the folder or label to filter by
   const folderParam = req.query.folder?.toUpperCase();
   const labelParam = req.query.label;
@@ -285,15 +204,8 @@ const processEmailFetch = async (req, res, gmail) => {
 
     res.json({ emails: detailedMessages, nextPageToken });
   } catch (error) {
-    console.error("Error in processing emails:", error);
-    // Provide more detailed error message
-    const errorMessage = error.message || "Error processing emails";
-    console.error("Detailed error in processEmailFetch:", errorMessage);
-    res.status(500).json({
-      error: "Error processing emails",
-      message: errorMessage,
-      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
-    });
+    console.error("Error in fetching emails:", error);
+    res.status(500).json({ error: "Error fetching emails" });
   }
 };
 

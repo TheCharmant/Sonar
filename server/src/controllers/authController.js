@@ -14,7 +14,7 @@ export const googleLogin = async (req, res) => {
   const { uid } = req.body;
   const ipAddress = req.ip || req.connection.remoteAddress;
   const userAgent = req.headers['user-agent'];
-
+  
   if (!uid) {
     await createAuditLog({
       type: AuditLogTypes.AUTH,
@@ -34,11 +34,11 @@ export const googleLogin = async (req, res) => {
   try {
     const token = generateToken(uid);
     const url = getAuthUrl(token);
-
+    
     res.json({ url });
   } catch (error) {
     console.error("Google login error:", error);
-
+    
     await createAuditLog({
       type: AuditLogTypes.AUTH,
       action: AuditLogActions.LOGIN_FAILED,
@@ -51,7 +51,7 @@ export const googleLogin = async (req, res) => {
       },
       severity: LogSeverity.ERROR
     });
-
+    
     res.status(500).json({ error: "Failed to generate authentication URL" });
   }
 };
@@ -162,7 +162,7 @@ export const oauthCallback = async (req, res) => {
   const { code, state } = req.query;
   const ipAddress = req.ip || req.connection.remoteAddress;
   const userAgent = req.headers['user-agent'];
-
+  
   if (!code || !state) {
     await createAuditLog({
       type: AuditLogTypes.AUTH,
@@ -208,7 +208,7 @@ export const oauthCallback = async (req, res) => {
 
     console.log("Fetching user info...");
     const userInfo = await getUserInfo(tokens.access_token);
-
+    
     // Check if email already exists in Firebase before proceeding
     const { email } = userInfo;
     try {
@@ -222,22 +222,22 @@ export const oauthCallback = async (req, res) => {
       // Email doesn't exist, will continue with normal flow
       console.log(`Email ${email} not found, will create new user if needed`);
     }
-
+  
     const { name } = userInfo;
-
+    
     // Check if this Gmail account is already connected to a user
     const existingTokensSnapshot = await db.collection("oauth_tokens")
       .where("gmail_email", "==", email)
       .get();
-
+    
     let isNewAccount = false;
     let accountSwitched = false;
     let originalUid = uid;
-
+    
     if (!existingTokensSnapshot.empty) {
       const existingDoc = existingTokensSnapshot.docs[0];
       const existingUid = existingDoc.id;
-
+      
       if (existingUid !== uid) {
         console.log("Gmail account found with different UID, using existing account");
         accountSwitched = true;
@@ -247,7 +247,7 @@ export const oauthCallback = async (req, res) => {
     } else {
       isNewAccount = true;
     }
-
+  
     try {
       console.log("Checking Firebase user...");
       await auth.getUser(uid); // This checks if the user already exists in Firebase
@@ -257,7 +257,7 @@ export const oauthCallback = async (req, res) => {
         console.log("User not found, creating new user...");
         try {
           await auth.createUser({ uid, email });
-
+          
           // Explicitly create user document in Firestore users collection
           const userData = {
             name,
@@ -269,19 +269,19 @@ export const oauthCallback = async (req, res) => {
             lastLoginIP: ipAddress,
             lastLoginUserAgent: userAgent
           };
-
+          
           // Directly store in users collection
           await db.collection("users").doc(uid).set(userData);
           console.log("User document created in users collection:", uid);
-
+          
           // Also call createUser for any additional logic it might contain
           await createUser(uid, email, name, userData);
           console.log("User created successfully in Firestore:", uid);
-
+          
           isNewAccount = true;
         } catch (createErr) {
           console.error("Error creating user:", createErr);
-
+          
           if (createErr.code !== 'auth/email-already-exists') {
             await createAuditLog({
               type: AuditLogTypes.USER_MGMT,
@@ -301,7 +301,7 @@ export const oauthCallback = async (req, res) => {
         console.log("Email already exists, skipping creation...");
       } else {
         console.error("Error getting user:", err);
-
+        
         await createAuditLog({
           type: AuditLogTypes.AUTH,
           action: AuditLogActions.LOGIN_FAILED,
@@ -314,7 +314,7 @@ export const oauthCallback = async (req, res) => {
           },
           severity: LogSeverity.ERROR
         });
-
+        
         return res.status(500).json({ error: "Failed to verify user" });
       }
     }
@@ -324,10 +324,10 @@ export const oauthCallback = async (req, res) => {
 
     if (userDoc.exists) {
       const userData = userDoc.data();
-
+      
       if (userData.status === 'inactive') {
         console.log(`User ${uid} (${email}) is deactivated, rejecting login`);
-
+        
         // Log the failed login attempt
         await createAuditLog({
           type: AuditLogTypes.AUTH,
@@ -341,10 +341,11 @@ export const oauthCallback = async (req, res) => {
           },
           severity: LogSeverity.WARNING
         });
-
+        
         // Redirect to login page with error
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        return res.redirect(`${frontendUrl}/login?error=Your+account+has+been+deactivated.+Please+contact+an+administrator.&code=account_deactivated`);
+        const frontendUrls = process.env.FRONTEND_URLS?.split(',') ?? [];
+        const redirectUrl = frontendUrls[0];
+        return res.redirect(`${redirectUrl}/login?error=Your+account+has+been+deactivated.+Please+contact+an+administrator.&code=account_deactivated`);
       }
     }
 
@@ -360,8 +361,19 @@ export const oauthCallback = async (req, res) => {
       gmail_email: email,
       last_updated: new Date().toISOString()
     });
+    
+    const newToken = jwt.sign(
+      { 
+        uid: uid,
+        email: email,
+        name: name || '',
+        role: 'user'
+      }, 
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
 
-    const newToken = generateToken(uid);
+    console.log("Generated new token:", newToken.substring(0, 10) + "...");
 
     // Create a single audit log for the login or signup
     await createAuditLog({
@@ -379,15 +391,14 @@ export const oauthCallback = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     });
-
+  
     console.log("Redirecting to frontend...");
-    // Use FRONTEND_URL (singular) as defined in .env
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    console.log(`Redirecting to: ${frontendUrl}/dashboard?token=${newToken}`);
-    res.redirect(`${frontendUrl}/dashboard?token=${newToken}`);
+    const frontendUrls = process.env.FRONTEND_URLS?.split(',') ?? [];
+    const redirectUrl = frontendUrls[0];
+    res.redirect(`${redirectUrl}/dashboard?token=${newToken}`);
   } catch (err) {
     console.error("OAuth callback failed:", err);
-
+    
     await createAuditLog({
       type: AuditLogTypes.AUTH,
       action: AuditLogActions.LOGIN_FAILED,
@@ -400,7 +411,59 @@ export const oauthCallback = async (req, res) => {
       },
       severity: LogSeverity.ERROR
     });
-
+    
     return res.status(500).json({ error: "OAuth callback error" });
+  }
+};
+
+// Make sure this function is exported
+export const validateToken = async (req, res) => {
+  try {
+    // If the request made it past the auth middleware, the token is valid
+    // We can do additional checks here if needed
+    
+    // Check if the OAuth token is still valid
+    const uid = req.user.uid;
+    const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
+    
+    if (!tokenDoc.exists) {
+      return res.status(401).json({ error: "OAuth token not found" });
+    }
+    
+    const tokenData = tokenDoc.data();
+    
+    // Check if token is expired
+    if (!tokenData.expiry_date || new Date().getTime() > tokenData.expiry_date) {
+      // Try to refresh the token if we have a refresh token
+      if (tokenData.refresh_token) {
+        try {
+          oauthClient.setCredentials({
+            refresh_token: tokenData.refresh_token
+          });
+          
+          const { tokens } = await oauthClient.refreshToken(tokenData.refresh_token);
+          
+          // Update token in database
+          await db.collection("oauth_tokens").doc(uid).update({
+            access_token: tokens.access_token,
+            expiry_date: tokens.expiry_date
+          });
+          
+          // Token refreshed successfully
+          return res.status(200).json({ valid: true, refreshed: true });
+        } catch (refreshError) {
+          console.error("Error refreshing token:", refreshError);
+          return res.status(401).json({ error: "Failed to refresh token" });
+        }
+      } else {
+        return res.status(401).json({ error: "Token expired and no refresh token available" });
+      }
+    }
+    
+    // Token is valid
+    return res.status(200).json({ valid: true });
+  } catch (error) {
+    console.error("Error validating token:", error);
+    res.status(500).json({ error: "Failed to validate token" });
   }
 };

@@ -37,9 +37,10 @@ interface EmailResponse {
 interface EmailListProps {
   folder: "inbox" | "sent";
   onSelectEmail?: (email: EmailContent) => void;
+  onError?: (message: string) => void;
 }
 
-const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
+const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
   const { token } = useAuth();
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedEmailContent, setSelectedEmailContent] = useState<EmailContent | null>(null);
-  const [labels, setLabels] = useState<Label[]>([]);
+  const [, setLabels] = useState<Label[]>([]);
 
   // Add interface for Label
   interface Label {
@@ -106,10 +107,17 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
 
     const fetchInitial = async () => {
       try {
+<<<<<<< HEAD
         // Get the backend URL from environment variables, with a fallback
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
         const url = new URL(`${backendUrl}/api/email/fetch`);
+=======
+        setLoading(true);
+        setError(null);
+        
+        const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
+>>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
         url.searchParams.set("folder", folder.toUpperCase());
 
         // Add label parameter if selected
@@ -124,6 +132,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
+<<<<<<< HEAD
         if (!res.ok) {
           const errorData = await res.json();
           console.error("Server error:", errorData);
@@ -154,6 +163,19 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
           }
           return;
         }
+=======
+        if (res.status === 401 || res.status === 403) {
+          const errorMsg = "Your session has expired. Please log in again.";
+          setError(errorMsg);
+          if (onError) onError(errorMsg);
+          return;
+        }
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to load emails");
+        }
+>>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
 
         const data: EmailResponse = await res.json();
 
@@ -167,16 +189,24 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
 
         setEmails(data.emails);
         setNextPageToken(data.nextPageToken || null);
+<<<<<<< HEAD
       } catch (err) {
         console.error("Error fetching emails:", err);
         setError(err instanceof Error ? err.message : "Failed to load emails");
+=======
+      } catch (error) {
+        console.error("Error fetching emails:", error);
+        const errorMsg = error instanceof Error ? error.message : "Failed to load emails";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
+>>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
       } finally {
         setLoading(false);
       }
     };
 
     fetchInitial();
-  }, [token, folder]);
+  }, [token, folder, onError]);
 
   const loadMoreEmails = async () => {
     if (!nextPageToken) return;
@@ -195,6 +225,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+<<<<<<< HEAD
       if (!res.ok) {
         const errorData = await res.json();
         console.error("Server error loading more emails:", errorData);
@@ -223,6 +254,17 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
           return;
         }
 
+=======
+      if (res.status === 401 || res.status === 403) {
+        const errorMsg = "Your session has expired. Please log in again.";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json();
+>>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
         throw new Error(errorData.error || "Failed to load more emails");
       }
 
@@ -242,8 +284,14 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
 
       setNextPageToken(data.nextPageToken || null);
     } catch (err) {
+<<<<<<< HEAD
       console.error("Error loading more emails:", err);
       setError(err instanceof Error ? err.message : "Failed to load more emails");
+=======
+      const errorMsg = err instanceof Error ? err.message : "Failed to load more emails";
+      setError(errorMsg);
+      if (onError) onError(errorMsg);
+>>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
     } finally {
       setLoading(false);
     }
@@ -270,6 +318,7 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+<<<<<<< HEAD
       if (!res.ok) {
         const errorData = await res.json();
         console.error("Server error fetching email detail:", errorData);
@@ -292,6 +341,17 @@ const EmailList = ({ folder, onSelectEmail }: EmailListProps) => {
           }
         }
 
+=======
+      if (res.status === 401 || res.status === 403) {
+        const errorMsg = "Your session has expired. Please log in again.";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json();
+>>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
         throw new Error(errorData.error || "Failed to load email");
       }
 

@@ -21,22 +21,21 @@ export const AuditLogActions = {
   ACCESS_GRANTED: "access_granted",
   ACCESS_DENIED: "access_denied",
   AUTHENTICATION_FAILED: "authentication_failed",
-
+  
   // User actions
   USER_CREATED: "user_created",
   USER_UPDATED: "user_updated",
   USER_DELETED: "user_deleted",
   USER_CREATION_FAILED: "user_creation_failed",
-
+  
   // Admin actions
   SETTINGS_UPDATED: "settings_updated",
   SYSTEM_CONFIGURED: "system_configured",
-
+  
   // Email actions
   EMAIL_SENT: "email_sent",
   EMAIL_FAILED: "email_failed",
-  EMAIL_READ: "email_read",
-
+  
   // Audit actions
   VIEWED_LOGS: "viewed_logs",
   ACKNOWLEDGED_ALERT: "acknowledged_alert",
@@ -72,7 +71,7 @@ export const createAuditLog = async (logData) => {
       severity = LogSeverity.INFO,
       targetUser = null
     } = logData;
-
+    
     // Create log entry
     const logEntry = {
       type,
@@ -83,11 +82,11 @@ export const createAuditLog = async (logData) => {
       timestamp: new Date(),
       targetUser
     };
-
+    
     // Add to Firestore
     const docRef = await db.collection("auditLogs").add(logEntry);
     console.log(`Audit log created: ${docRef.id}`);
-
+    
     return docRef.id;
   } catch (error) {
     console.error("Error creating audit log:", error);
@@ -120,7 +119,7 @@ export const getUserAuditLogs = async (userId, limit = 10) => {
       .orderBy("timestamp", "desc")
       .limit(limit)
       .get();
-
+    
     const logs = [];
     snapshot.forEach(doc => {
       logs.push({
@@ -128,7 +127,7 @@ export const getUserAuditLogs = async (userId, limit = 10) => {
         ...doc.data()
       });
     });
-
+    
     return logs;
   } catch (error) {
     console.error("Error getting user audit logs:", error);
@@ -148,7 +147,7 @@ export const getSecurityAlerts = async (limit = 50) => {
       .orderBy("timestamp", "desc")
       .limit(limit)
       .get();
-
+    
     const alerts = [];
     snapshot.forEach(doc => {
       alerts.push({
@@ -156,7 +155,7 @@ export const getSecurityAlerts = async (limit = 50) => {
         ...doc.data()
       });
     });
-
+    
     return alerts;
   } catch (error) {
     console.error("Error getting security alerts:", error);
