@@ -27,7 +27,7 @@ export const Login = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
     const errorCode = urlParams.get('code');
-    
+
     if (error && errorCode === 'account_deactivated') {
       setDeactivatedError(true);
       // Clear token when account is deactivated
@@ -43,12 +43,25 @@ export const Login = () => {
       setLoading(true);
       const state = uuid();
       sessionStorage.setItem("oauth_state", state);
-      
+
+      console.log("Generated state:", state);
+      console.log("Calling getAuthUrl...");
+
       const authUrl = await getAuthUrl(state);
+
+      console.log("Redirecting to:", authUrl);
+
+      // Make sure we have a valid URL before redirecting
+      if (!authUrl || typeof authUrl !== 'string' || !authUrl.startsWith('http')) {
+        throw new Error(`Invalid auth URL: ${authUrl}`);
+      }
+
       window.location.href = authUrl;
     } catch (error) {
       console.error("Failed to get auth URL:", error);
       setLoading(false);
+      // Show an error message to the user
+      alert("Failed to connect to Google. Please try again later.");
     }
   };
 
@@ -61,9 +74,9 @@ export const Login = () => {
             <span>Your account has been deactivated. Please contact an administrator.</span>
           </div>
         )}
-        
+
         <h1>Welcome to <span className="brand-name">Soñar</span></h1>
-        
+
         <button
           onClick={handleGoogleLogin}
           className="google-login-btn"

@@ -107,20 +107,11 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
 
     const fetchInitial = async () => {
       try {
-<<<<<<< HEAD:client/src/components/EmailList.tsx
-<<<<<<< HEAD
-        // Get the backend URL from environment variables, with a fallback
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-
-        const url = new URL(`${backendUrl}/api/email/fetch`);
-=======
         setLoading(true);
-        setError(null);
-        
-=======
->>>>>>> 2cf35c51c88c70b47be69f35d6637dec0954b75d:client/src/components/EmailList/EmailList.tsx
+        setError("");
+
         const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
->>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
+
         url.searchParams.set("folder", folder.toUpperCase());
 
         // Add label parameter if selected
@@ -135,7 +126,6 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-<<<<<<< HEAD
         if (!res.ok) {
           const errorData = await res.json();
           console.error("Server error:", errorData);
@@ -161,24 +151,18 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
               setError("There was a problem processing your emails. This could be due to an expired or invalid token. Please reconnect your Gmail account in settings.");
             }
           }
+          else if (res.status === 401 || res.status === 403) {
+            const errorMsg = "Your session has expired. Please log in again.";
+            setError(errorMsg);
+            if (onError) onError(errorMsg);
+          }
           else {
-            throw new Error(errorData.error || "Failed to load emails");
+            const errorMsg = errorData.error || "Failed to load emails";
+            setError(errorMsg);
+            if (onError) onError(errorMsg);
           }
           return;
         }
-=======
-        if (res.status === 401 || res.status === 403) {
-          const errorMsg = "Your session has expired. Please log in again.";
-          setError(errorMsg);
-          if (onError) onError(errorMsg);
-          return;
-        }
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Failed to load emails");
-        }
->>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
 
         const data: EmailResponse = await res.json();
 
@@ -192,22 +176,12 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
 
         setEmails(data.emails);
         setNextPageToken(data.nextPageToken || null);
-<<<<<<< HEAD:client/src/components/EmailList.tsx
-<<<<<<< HEAD
+
       } catch (err) {
         console.error("Error fetching emails:", err);
-        setError(err instanceof Error ? err.message : "Failed to load emails");
-=======
-      } catch (error) {
-        console.error("Error fetching emails:", error);
-        const errorMsg = error instanceof Error ? error.message : "Failed to load emails";
-=======
-      } catch (err) {
         const errorMsg = err instanceof Error ? err.message : "Failed to load emails";
->>>>>>> 2cf35c51c88c70b47be69f35d6637dec0954b75d:client/src/components/EmailList/EmailList.tsx
         setError(errorMsg);
         if (onError) onError(errorMsg);
->>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
       } finally {
         setLoading(false);
       }
@@ -233,7 +207,6 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-<<<<<<< HEAD
       if (!res.ok) {
         const errorData = await res.json();
         console.error("Server error loading more emails:", errorData);
@@ -261,19 +234,18 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
           }
           return;
         }
-
-=======
-      if (res.status === 401 || res.status === 403) {
-        const errorMsg = "Your session has expired. Please log in again.";
-        setError(errorMsg);
-        if (onError) onError(errorMsg);
-        return;
-      }
-
-      if (!res.ok) {
-        const errorData = await res.json();
->>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
-        throw new Error(errorData.error || "Failed to load more emails");
+        else if (res.status === 401 || res.status === 403) {
+          const errorMsg = "Your session has expired. Please log in again.";
+          setError(errorMsg);
+          if (onError) onError(errorMsg);
+          return;
+        }
+        else {
+          const errorMsg = errorData.error || "Failed to load more emails";
+          setError(errorMsg);
+          if (onError) onError(errorMsg);
+          return;
+        }
       }
 
       const data: EmailResponse = await res.json();
@@ -292,14 +264,10 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
 
       setNextPageToken(data.nextPageToken || null);
     } catch (err) {
-<<<<<<< HEAD
       console.error("Error loading more emails:", err);
-      setError(err instanceof Error ? err.message : "Failed to load more emails");
-=======
       const errorMsg = err instanceof Error ? err.message : "Failed to load more emails";
       setError(errorMsg);
       if (onError) onError(errorMsg);
->>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
     } finally {
       setLoading(false);
     }
@@ -326,7 +294,6 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-<<<<<<< HEAD
       if (!res.ok) {
         const errorData = await res.json();
         console.error("Server error fetching email detail:", errorData);
@@ -349,17 +316,13 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
           }
         }
 
-=======
-      if (res.status === 401 || res.status === 403) {
-        const errorMsg = "Your session has expired. Please log in again.";
-        setError(errorMsg);
-        if (onError) onError(errorMsg);
-        return;
-      }
+        if (res.status === 401 || res.status === 403) {
+          const errorMsg = "Your session has expired. Please log in again.";
+          setError(errorMsg);
+          if (onError) onError(errorMsg);
+          return;
+        }
 
-      if (!res.ok) {
-        const errorData = await res.json();
->>>>>>> c8f6452b3e36cb399db6d68438137550c9519617
         throw new Error(errorData.error || "Failed to load email");
       }
 
@@ -1156,6 +1119,4 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
     </div>
   );
 };
-
 export default EmailList;
-

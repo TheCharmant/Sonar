@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import EmailList from "../../components/EmailList/EmailList";
 import EmailDetail from "../../components/EmailDetail/EmailDetail";
-import AnalyticsDashboard from "../../components/Analytics/AnalyticsDasboard";
+import AnalyticsDashboard from "../../components/analytics/AnalyticsDashboard";
 import { useAuth } from "../../context/AuthContext";
 import type { EmailContent } from "../../components/EmailDetail/EmailDetail";
 import "./Dashboard.css";
@@ -40,13 +40,13 @@ const Dashboard = () => {
           "Authorization": `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
         // Token is invalid
         handleTokenError();
         return;
       }
-      
+
       // Token is valid, we can proceed
       setIsLoading(false);
     } catch (error) {
@@ -109,14 +109,14 @@ const Dashboard = () => {
         </div>
         <nav className="sidebar-nav">
           <ul>
-            <li 
+            <li
               className={view === "dashboard" ? "active" : ""}
               onClick={navigateToDashboard}
             >
               <div className="nav-icon dashboard-icon"></div>
               <span>Dashboard</span>
             </li>
-            <li 
+            <li
               className={view === "inbox" ? "active" : ""}
               onClick={navigateToInbox}
             >
@@ -124,7 +124,7 @@ const Dashboard = () => {
               <span>Inbox</span>
               {view === "inbox" && <span className="badge">2</span>}
             </li>
-            <li 
+            <li
               className={view === "sent" ? "active" : ""}
               onClick={navigateToSentbox}
             >
@@ -150,22 +150,22 @@ const Dashboard = () => {
             <header className="dashboard-header">
               <h1>{view === "inbox" ? "Inbox" : view === "sent" ? "Sentbox" : "Dashboard"}</h1>
             </header>
-            
+
             {/* Only show stats and charts on the main dashboard view */}
             {view === "dashboard" && (
               <AnalyticsDashboard />
             )}
-            
+
             {/* Show email list for inbox and sentbox views */}
             {(view === "inbox" || view === "sent") && (
               <EmailList
                 key={view}
                 folder={view}
-                onSelectEmail={(email) => {
+                onSelectEmail={(email: EmailContent) => {
                   setSelectedEmail(email);
                   setCurrentScreen("detail");
                 }}
-                onError={(errorMsg) => {
+                onError={(errorMsg: string) => {
                   if (errorMsg.includes("unauthorized") || errorMsg.includes("token")) {
                     handleTokenError();
                   } else {
