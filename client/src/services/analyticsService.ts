@@ -423,4 +423,8 @@ export const getEmailAnalytics = async (
       }
     };
   }
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 2cf35c51c88c70b47be69f35d6637dec0954b75d

@@ -3,13 +3,14 @@ import React from 'react';
 // Add comprehensive styles for email content
 const emailStyles = `
   .email-content {
-    font-family: Arial, sans-serif;
-    line-height: 1.5;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.6;
     color: #333;
     width: 100%;
     overflow-wrap: break-word;
     word-wrap: break-word;
     word-break: break-word;
+    font-size: 14px;
   }
 
   /* Style for email addresses to ensure they wrap properly */
@@ -18,11 +19,23 @@ const emailStyles = `
     overflow-wrap: break-word;
     word-wrap: break-word;
     word-break: break-all;
+    color: #555;
   }
 
   .email-content img {
     max-width: 100%;
     height: auto;
+    border-radius: 4px;
+  }
+
+  .email-content a {
+    color: #3b82f6;
+    text-decoration: none;
+    border-bottom: 1px solid #dbeafe;
+  }
+
+  .email-content a:hover {
+    border-bottom-color: #3b82f6;
   }
 
   .email-content table {
@@ -38,12 +51,6 @@ const emailStyles = `
     padding: 5px;
     border: 1px solid #ddd;
     word-break: break-word;
-  }
-
-  .email-content a {
-    color: #0066cc;
-    text-decoration: underline;
-    word-break: break-all;
   }
 
   .email-content p {
@@ -96,6 +103,83 @@ const emailStyles = `
     padding: 10px;
     border-radius: 4px;
     overflow-x: auto;
+  }
+
+  /* Email content container */
+  .email-content-container {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: white;
+    font-size: 14px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  /* Email header section */
+  .email-header {
+    margin-bottom: 16px;
+  }
+
+  .email-header h1 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #111;
+    font-weight: 600;
+  }
+
+  /* Plain text email formatting */
+  .plain-text-email {
+    white-space: pre-wrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background-color: #f9fafb;
+    padding: 16px;
+    border-radius: 6px;
+    color: #374151;
+  }
+  
+  /* Avatar styling */
+  .avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 600;
+    color: white;
+  }
+  
+  /* Link styling */
+  .email-link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .email-link:hover {
+    text-decoration: underline;
+  }
+  
+  /* Metadata styling */
+  .email-metadata {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+  
+  .email-metadata-item {
+    display: flex;
+    align-items: baseline;
+  }
+  
+  .email-metadata-label {
+    font-weight: 500;
+    width: 40px;
+    color: #4b5563;
   }
 `;
 
@@ -253,89 +337,53 @@ const EmailDetail: React.FC<EmailDetailProps> = ({
     );
   }
 
+  // Update the formatEmailBody function
+  const formatEmailBody = (content: string): string => {
+    if (!content) return "";
+    
+    let formatted = content;
+    
+    // Check if content is just a long string without HTML tags
+    if (!/<[a-z][\s\S]*>/i.test(formatted)) {
+      // Convert URLs to clickable links with better styling
+      formatted = formatted.replace(
+        /(https?:\/\/[^\s]+)/g, 
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="email-link">$1</a>'
+      );
+      
+      // Convert line breaks to <br> tags
+      formatted = formatted.replace(/\n/g, '<br>');
+      
+      // Wrap in a div with plain text styling
+      formatted = `<div class="plain-text-email">${formatted}</div>`;
+    }
+    
+    return formatted;
+  };
+
+  // Update the EmailDetail component to work with the new header
+  // Remove the existing EmailHeader component since we're handling that in AdminEmailList
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-white rounded-lg overflow-hidden">
       {/* Add email styles */}
       <style dangerouslySetInnerHTML={{ __html: emailStyles }} />
-
-      {isMobile && (
-        <div className="p-2 border-b flex justify-between items-center">
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-500"
-          >
-            ← Back
-          </button>
-        </div>
-      )}
-
-      <div className="p-4 h-full flex flex-col overflow-auto">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold mb-3">{cleanupEmailContent(emailContent.subject)}</h1>
-
-          <div className="flex items-center mb-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mr-3">
-              {folder === "sent"
-                ? (emailContent.to?.charAt(0) || "T").toUpperCase()
-                : emailContent.from.charAt(0).toUpperCase()
-              }
-            </div>
-            <div>
-              {folder === "sent" ? (
-                <>
-                  <div className="font-medium">To: <span className="email-address">{cleanupEmailContent(emailContent.to || "")}</span></div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(emailContent.date).toLocaleString()}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="font-medium"><span className="email-address">{cleanupEmailContent(emailContent.from)}</span></div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(emailContent.date).toLocaleString()}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {folder === "inbox" && emailContent.to && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">To:</span> <span className="email-address">{cleanupEmailContent(emailContent.to || "")}</span>
+      
+      {/* Email content with proper padding */}
+      <div className="p-6 h-full flex flex-col overflow-auto">
+        <div className="email-content-container flex-grow">
+          {processedBody ? (
+            <div
+              className="email-content rounded-lg border border-gray-200 p-4 shadow-sm"
+              dangerouslySetInnerHTML={{ __html: formatEmailBody(processedBody) }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-gray-500 text-sm italic p-4 text-center">
+                No content available for this email.
+              </div>
             </div>
           )}
-
-          {folder === "sent" && emailContent.from && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">From:</span> <span className="email-address">{cleanupEmailContent(emailContent.from)}</span>
-            </div>
-          )}
-
-          {emailContent.cc && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">Cc:</span> <span className="email-address">{cleanupEmailContent(emailContent.cc || "")}</span>
-            </div>
-          )}
-
-          {emailContent.bcc && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">Bcc:</span> <span className="email-address">{cleanupEmailContent(emailContent.bcc || "")}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t pt-4 flex-grow overflow-auto">
-          <div className="max-h-[calc(100vh-250px)] overflow-auto border rounded p-4 bg-white">
-            {processedBody ? (
-              <div
-                className="email-content"
-                dangerouslySetInnerHTML={{ __html: processedBody }}
-                style={{ maxWidth: '100%', overflowX: 'auto', wordBreak: 'break-word' }}
-              />
-            ) : (
-              <div className="text-gray-500">No content available for this email.</div>
-            )}
-          </div>
         </div>
       </div>
     </div>

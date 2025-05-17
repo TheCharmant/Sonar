@@ -60,6 +60,7 @@ const AdminEmailList = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedEmailContent, setSelectedEmailContent] = useState<EmailContent | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<any>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -92,8 +93,11 @@ const AdminEmailList = () => {
     }
   };
 
-  const fetchFullEmail = async (messageId: string) => {
+  const fetchFullEmail = async (messageId: string, email: any) => {
     try {
+      // Store the selected email for category reference
+      setSelectedEmail(email);
+      
       const res = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/email/detail?id=${messageId}`,
         {
@@ -157,6 +161,12 @@ const AdminEmailList = () => {
     }))
   ]);
 
+  // Add a function to extract email subject for the modal title
+  const getEmailSubject = (email: any): string => {
+    const subjectHeader = email.payload.headers.find((h: any) => h.name === "Subject");
+    return subjectHeader?.value || "No Subject";
+  };
+
   // Add utility functions for date formatting and email categorization
   const formatDateToUTC = (dateStr: string): string => {
     if (!dateStr) return 'No date';
@@ -208,22 +218,22 @@ const AdminEmailList = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">All User Emails (Admin View)</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">All User Emails (Admin View)</h1>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto bg-white rounded-lg shadow">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="py-2 px-4 border text-left">Timestamp (UTC)</th>
-              <th className="py-2 px-4 border text-left">Local Time</th>
-              <th className="py-2 px-4 border text-left">User ID</th>
-              <th className="py-2 px-4 border text-left">Direction</th>
-              <th className="py-2 px-4 border text-left">Type</th>
-              <th className="py-2 px-4 border text-left">Labels</th>
-              <th className="py-2 px-4 border text-left">Snippet</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local Time</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Direction</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Labels</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Content</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {allEmails.map((email, index) => {
               const dateHeader = email.payload.headers.find(h => h.name === "Date")?.value;
               const utcTimestamp = formatDateToUTC(dateHeader);
@@ -236,10 +246,10 @@ const AdminEmailList = () => {
               return (
                 <tr key={`${email.userId}-${email.category}-${email.id}-${index}`} 
                     className={`hover:bg-gray-50 ${email.isUnread ? 'font-semibold' : ''}`}>
-                  <td className="py-2 px-4 border text-xs font-mono">{utcTimestamp}</td>
-                  <td className="py-2 px-4 border">{localTime}</td>
-                  <td className="py-2 px-4 border">{email.userId}</td>
-                  <td className="py-2 px-4 border">
+                  <td className="py-3 px-4 text-xs font-mono text-gray-500">{utcTimestamp}</td>
+                  <td className="py-3 px-4 text-sm text-gray-500">{localTime}</td>
+                  <td className="py-3 px-4 text-sm text-gray-500">{email.userId}</td>
+                  <td className="py-3 px-4">
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       direction === "Outgoing" 
                         ? "bg-green-100 text-green-800" 
@@ -248,12 +258,12 @@ const AdminEmailList = () => {
                       {direction}
                     </span>
                   </td>
-                  <td className="py-2 px-4 border">
+                  <td className="py-3 px-4">
                     <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
                       {communicationType}
                     </span>
                   </td>
-                  <td className="py-2 px-4 border">
+                  <td className="py-3 px-4">
                     <div className="flex flex-wrap gap-1">
                       {email.labels?.map(label => {
                         // Customize label colors based on type
@@ -281,12 +291,15 @@ const AdminEmailList = () => {
                       })}
                     </div>
                   </td>
-                  <td className="py-2 px-4 border">
+                  <td className="py-3 px-4">
                     <button 
-                      onClick={() => fetchFullEmail(email.id)}
-                      className="text-left hover:underline"
+                      onClick={() => fetchFullEmail(email.id, email)}
+                      className="text-left hover:underline text-sm text-gray-700 group flex items-center"
                     >
-                      {email.snippet}
+                      <span className="truncate max-w-md">{email.snippet}</span>
+                      <span className="ml-2 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        View
+                      </span>
                     </button>
                   </td>
                 </tr>
@@ -296,20 +309,100 @@ const AdminEmailList = () => {
         </table>
       </div>
 
-      {/* Email modal */}
+      {/* Improved Email modal */}
       {modalOpen && selectedEmailContent && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow relative">
-            <button
-              onClick={closeModal}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-            >
-              ✕
-            </button>
-            <EmailDetail 
-              emailContent={selectedEmailContent}
-              folder={email.category === "SENT" ? "sent" : "inbox"}
-            />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-3xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Modern Email Header */}
+            <div className="p-6 border-b border-gray-200">
+              {/* Subject and Close Button */}
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-semibold text-gray-900 pr-8">
+                  {selectedEmailContent.subject}
+                </h2>
+                <button 
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Sender Info with Avatar */}
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3">
+                    {selectedEmail?.category === "SENT" 
+                      ? (selectedEmailContent.to?.split('<')[0].trim().charAt(0) || "R")
+                      : (selectedEmailContent.from?.split('<')[0].trim().charAt(0) || "S")}
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {selectedEmail?.category === "SENT" 
+                        ? selectedEmailContent.to?.split('<')[0].trim() || "Recipient"
+                        : selectedEmailContent.from?.split('<')[0].trim() || "Sender"}
+                    </div>
+                    <div className="text-sm text-gray-500 font-mono">
+                      {selectedEmail?.category === "SENT"
+                        ? (selectedEmailContent.to?.match(/<(.+)>/) ? selectedEmailContent.to.match(/<(.+)>/)[1] : "")
+                        : (selectedEmailContent.from?.match(/<(.+)>/) ? selectedEmailContent.from.match(/<(.+)>/)[1] : "")}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {selectedEmailContent.date ? new Date(selectedEmailContent.date).toLocaleString(undefined, {
+                    weekday: 'short',
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                  }) : ""}
+                </div>
+              </div>
+              
+              {/* Recipients Info */}
+              <div className="text-sm text-gray-600 space-y-1">
+                {selectedEmail?.category === "INBOX" && selectedEmailContent.to && (
+                  <div className="flex">
+                    <span className="font-medium w-8">To:</span>
+                    <span className="flex-1">{selectedEmailContent.to}</span>
+                  </div>
+                )}
+                
+                {selectedEmail?.category === "SENT" && selectedEmailContent.from && (
+                  <div className="flex">
+                    <span className="font-medium w-8">From:</span>
+                    <span className="flex-1">{selectedEmailContent.from}</span>
+                  </div>
+                )}
+                
+                {selectedEmailContent.cc && (
+                  <div className="flex">
+                    <span className="font-medium w-8">Cc:</span>
+                    <span className="flex-1">{selectedEmailContent.cc}</span>
+                  </div>
+                )}
+                
+                {selectedEmailContent.bcc && (
+                  <div className="flex">
+                    <span className="font-medium w-8">Bcc:</span>
+                    <span className="flex-1">{selectedEmailContent.bcc}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Email Content */}
+            <div className="flex-grow overflow-auto">
+              <EmailDetail 
+                emailContent={selectedEmailContent}
+                folder={selectedEmail?.category === "SENT" ? "sent" : "inbox"}
+                onClose={closeModal}
+              />
+            </div>
           </div>
         </div>
       )}

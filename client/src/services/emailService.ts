@@ -140,4 +140,8 @@ const getMockEmails = (folder: 'inbox' | 'sent'): any[] => {
 
   console.log(`Generated ${emails.length} mock emails for ${folder} folder`);
   return emails;
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 2cf35c51c88c70b47be69f35d6637dec0954b75d
