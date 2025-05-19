@@ -1,103 +1,5 @@
-import React from 'react';
-
-// Add comprehensive styles for email content
-const emailStyles = `
-  .email-content {
-    font-family: Arial, sans-serif;
-    line-height: 1.5;
-    color: #333;
-    width: 100%;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    word-break: break-word;
-  }
-
-  /* Style for email addresses to ensure they wrap properly */
-  .email-address {
-    max-width: 100%;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    word-break: break-all;
-  }
-
-  .email-content img {
-    max-width: 100%;
-    height: auto;
-  }
-
-  .email-content table {
-    max-width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 10px;
-    table-layout: fixed;
-    width: 100%;
-  }
-
-  .email-content table td,
-  .email-content table th {
-    padding: 5px;
-    border: 1px solid #ddd;
-    word-break: break-word;
-  }
-
-  .email-content a {
-    color: #0066cc;
-    text-decoration: underline;
-    word-break: break-all;
-  }
-
-  .email-content p {
-    margin-bottom: 10px;
-    max-width: 100%;
-  }
-
-  .email-content ul,
-  .email-content ol {
-    margin-left: 20px;
-    margin-bottom: 10px;
-  }
-
-  .email-content blockquote {
-    border-left: 3px solid #ddd;
-    padding-left: 10px;
-    margin-left: 10px;
-    color: #666;
-  }
-
-  /* Fix for Gmail quoted content */
-  .email-content .gmail_quote {
-    border-left: 2px solid #ddd;
-    padding-left: 10px;
-    margin-left: 0;
-    color: #666;
-  }
-
-  /* Fix for common email client specific elements */
-  .email-content div[style] {
-    max-width: 100% !important;
-  }
-
-  .email-content span[style] {
-    max-width: 100% !important;
-    display: inline-block;
-  }
-
-  /* Force all images to be responsive */
-  .email-content img[width] {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-
-  /* Handle pre-formatted text */
-  .email-content pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    background-color: #f5f5f5;
-    padding: 10px;
-    border-radius: 4px;
-    overflow-x: auto;
-  }
-`;
+import React, { useState, useRef, useEffect } from 'react';
+import './EmailDetail.css';
 
 export interface EmailContent {
   id: string;
@@ -108,6 +10,8 @@ export interface EmailContent {
   cc?: string;
   bcc?: string;
   body: string;
+  mailedBy?: string;
+  signedBy?: string;
 }
 
 interface EmailDetailProps {
@@ -119,46 +23,53 @@ interface EmailDetailProps {
 
 const EmailDetail: React.FC<EmailDetailProps> = ({
   emailContent,
-  folder,
-  onClose,
-  isMobile = false
-}) => {
-  // Simple function to decode base64 content
-  const tryDecodeBase64 = (content: string): string => {
-    if (!content) return "";
-
-    // Special case for IMDb emails
-    if (content.startsWith('PCEtLVtpZiBtc28gfCBJRV0')) {
-      console.log("EmailDetail: Detected IMDb email format");
-      try {
-        // Try direct decode
-        const decoded = atob(content);
-        if (decoded.startsWith('<!--[if mso |')) {
-          console.log("EmailDetail: Successfully decoded IMDb email");
-          return decoded;
-        }
-
-        // If direct decode fails, try with padding
-        let padded = content;
-        while (padded.length % 4 !== 0) {
-          padded += '=';
-        }
-        const paddedDecoded = atob(padded);
-        if (paddedDecoded.includes('<!--') || paddedDecoded.includes('<html')) {
-          console.log("EmailDetail: Successfully decoded IMDb email with padding");
-          return paddedDecoded;
-        }
-      } catch (e) {
-        console.warn("EmailDetail: IMDb decode failed:", e);
+  folder}) => {
+  const [showPopupDetails, setShowPopupDetails] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Add click outside handler to close the popup
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        popupRef.current && 
+        !popupRef.current.contains(event.target as Node) &&
+        toggleButtonRef.current && 
+        !toggleButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowPopupDetails(false);
       }
     }
+    
+    // Add event listener when popup is open
+    if (showPopupDetails) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    // Clean up the event listener
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPopupDetails]);
 
+  // Process the email body
+  let processedBody = emailContent?.body || "";
+  if (emailContent?.body) {
+    // First try to decode base64 content
+    processedBody = tryDecodeBase64(emailContent.body);
+    // Then clean up common special characters that appear in emails
+    processedBody = cleanupEmailContent(processedBody);
+  }
+
+  // Simple function to decode base64 content
+  function tryDecodeBase64(content: string): string {
+    if (!content) return "";
+    // Base64 decoding logic (unchanged)
     try {
       // Check if this looks like base64
       if (/^[A-Za-z0-9+/=_-]+$/.test(content) && content.length > 20) {
         // Try to decode
         const decoded = atob(content);
-
         // Check if the decoded content looks like HTML
         if (decoded.includes('<html') ||
             decoded.includes('<!DOCTYPE') ||
@@ -172,23 +83,12 @@ const EmailDetail: React.FC<EmailDetailProps> = ({
       console.warn("Base64 decoding failed:", e);
       return content;
     }
-  };
-
-  // Process the email body
-  let processedBody = emailContent?.body || "";
-  if (emailContent?.body) {
-    // First try to decode base64 content
-    processedBody = tryDecodeBase64(emailContent.body);
-
-    // Then clean up common special characters that appear in emails
-    processedBody = cleanupEmailContent(processedBody);
   }
 
   // Function to clean up common special characters in emails
   function cleanupEmailContent(content: string): string {
     if (!content) return "";
-
-    // Replace common problematic characters
+    // Character replacement logic (unchanged)
     let cleaned = content
       // Non-breaking spaces and special spaces
       .replace(/Â/g, ' ')
@@ -217,126 +117,204 @@ const EmailDetail: React.FC<EmailDetailProps> = ({
       .replace(/Ã§/g, 'ç')
       .replace(/Ã/g, 'à');
 
-    // Remove unnecessary quotation marks at the beginning and end of the content
-    cleaned = cleaned.trim();
-    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-      cleaned = cleaned.substring(1, cleaned.length - 1);
-    }
-
-    // Remove any standalone quotation marks that appear on their own lines
-    cleaned = cleaned.replace(/^"\s*$/gm, '');
-    cleaned = cleaned.replace(/^\s*"\s*$/gm, '');
-
-    // Remove any other unnecessary characters
-    cleaned = cleaned
-      // Remove zero-width spaces
-      .replace(/\u200B/g, '')
-      // Remove zero-width non-joiners
-      .replace(/\u200C/g, '')
-      // Remove zero-width joiners
-      .replace(/\u200D/g, '')
-      // Remove left-to-right marks
-      .replace(/\u200E/g, '')
-      // Remove right-to-left marks
-      .replace(/\u200F/g, '')
-      // Remove other common invisible characters
-      .replace(/[\u2000-\u200F\u2028-\u202F\u205F-\u206F]/g, '');
-
     return cleaned;
   }
 
+  // Format date to be more readable
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      
+      // Format: "Fri, May 9, 4:57 PM (1 day ago)"
+      const options: Intl.DateTimeFormatOptions = { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      };
+      
+      let formattedDate = date.toLocaleString('en-US', options);
+      
+      // Add time ago
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) {
+        formattedDate += " (1 day ago)";
+      } else if (diffDays > 1 && diffDays < 30) {
+        formattedDate += ` (${diffDays} days ago)`;
+      }
+      
+      return formattedDate;
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   if (!emailContent) {
     return (
-      <div className="flex justify-center items-center h-full text-gray-500">
+      <div className="email-empty-state">
         Select an email to view
       </div>
     );
   }
 
+  // Extract email domain for display
+  const getEmailDomain = (email: string) => {
+    const match = email.match(/<([^>]+)>/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    return email;
+  };
+
+  // Extract display name
+  const getDisplayName = (email: string) => {
+    const match = email.match(/^([^<]+)</);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    
+    // If no display name, use the part before @ in email
+    const emailMatch = email.match(/<([^>]+)>/);
+    if (emailMatch && emailMatch[1]) {
+      return emailMatch[1].split('@')[0];
+    }
+    
+    return email.split('@')[0];
+  };
+
+  // Toggle popup details function
+  const togglePopupDetails = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowPopupDetails(!showPopupDetails);
+  };
+
+  // Add this CSS to the component or in a style tag
+  const emailStyles = `
+    .email-content table,
+    .email-content table * {
+      border: none !important;
+    }
+
+    .email-content table {
+      max-width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .email-content table td,
+    .email-content table th {
+      padding: 5px;
+      word-break: break-word;
+    }
+  `;
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="email-detail-container">
       {/* Add email styles */}
       <style dangerouslySetInnerHTML={{ __html: emailStyles }} />
-
-      {isMobile && (
-        <div className="p-2 border-b flex justify-between items-center">
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-500"
-          >
-            ← Back
-          </button>
+      
+      {/* Email subject with folder label */}
+      <div className="email-subject-container">
+        <h1 className="email-subject">{cleanupEmailContent(emailContent.subject)}</h1>
+        <span className="folder-label">{folder === "inbox" ? "Inbox" : "Sent"}</span>
+      </div>
+      
+      {/* Sender info with avatar */}
+      <div className="sender-container">
+        <div className="sender-avatar">
+          {getDisplayName(emailContent.from).charAt(0).toUpperCase()}
         </div>
-      )}
-
-      <div className="p-4 h-full flex flex-col overflow-auto">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold mb-3">{cleanupEmailContent(emailContent.subject)}</h1>
-
-          <div className="flex items-center mb-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mr-3">
-              {folder === "sent"
-                ? (emailContent.to?.charAt(0) || "T").toUpperCase()
-                : emailContent.from.charAt(0).toUpperCase()
-              }
-            </div>
-            <div>
-              {folder === "sent" ? (
-                <>
-                  <div className="font-medium">To: <span className="email-address">{cleanupEmailContent(emailContent.to || "")}</span></div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(emailContent.date).toLocaleString()}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="font-medium"><span className="email-address">{cleanupEmailContent(emailContent.from)}</span></div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(emailContent.date).toLocaleString()}
-                  </div>
-                </>
-              )}
-            </div>
+        <div className="sender-details">
+          <div className="sender-name-line">
+            <span className="sender-name">{getDisplayName(emailContent.from)}</span>
+            <span className="sender-email">&lt;{getEmailDomain(emailContent.from)}&gt;</span>
           </div>
-
-          {folder === "inbox" && emailContent.to && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">To:</span> <span className="email-address">{cleanupEmailContent(emailContent.to || "")}</span>
-            </div>
-          )}
-
-          {folder === "sent" && emailContent.from && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">From:</span> <span className="email-address">{cleanupEmailContent(emailContent.from)}</span>
-            </div>
-          )}
-
-          {emailContent.cc && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">Cc:</span> <span className="email-address">{cleanupEmailContent(emailContent.cc || "")}</span>
-            </div>
-          )}
-
-          {emailContent.bcc && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">Bcc:</span> <span className="email-address">{cleanupEmailContent(emailContent.bcc || "")}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t pt-4 flex-grow overflow-auto">
-          <div className="max-h-[calc(100vh-250px)] overflow-auto border rounded p-4 bg-white">
-            {processedBody ? (
-              <div
-                className="email-content"
-                dangerouslySetInnerHTML={{ __html: processedBody }}
-                style={{ maxWidth: '100%', overflowX: 'auto', wordBreak: 'break-word' }}
-              />
-            ) : (
-              <div className="text-gray-500">No content available for this email.</div>
+          <div className="recipient-line">
+            to {folder === "sent" ? emailContent.to : "me"}
+            <button 
+              ref={toggleButtonRef}
+              className="details-toggle" 
+              onClick={togglePopupDetails}
+              aria-label="Show email details"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            
+            {/* Popup details view */}
+            {showPopupDetails && (
+              <div className="email-popup-details" ref={popupRef}>
+                <table className="popup-details-table">
+                  <tbody>
+                    <tr>
+                      <td className="popup-details-label">from:</td>
+                      <td className="popup-details-value">{getDisplayName(emailContent.from)} &lt;{getEmailDomain(emailContent.from)}&gt;</td>
+                    </tr>
+                    <tr>
+                      <td className="popup-details-label">to:</td>
+                      <td className="popup-details-value">{emailContent.to}</td>
+                    </tr>
+                    <tr>
+                      <td className="popup-details-label">date:</td>
+                      <td className="popup-details-value">{new Date(emailContent.date).toLocaleString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: 'numeric',
+                        hour12: true
+                      })}</td>
+                    </tr>
+                    <tr>
+                      <td className="popup-details-label">subject:</td>
+                      <td className="popup-details-value">{emailContent.subject}</td>
+                    </tr>
+                    {emailContent.mailedBy && (
+                      <tr>
+                        <td className="popup-details-label">mailed-by:</td>
+                        <td className="popup-details-value">{emailContent.mailedBy}</td>
+                      </tr>
+                    )}
+                    {emailContent.signedBy && (
+                      <tr>
+                        <td className="popup-details-label">signed-by:</td>
+                        <td className="popup-details-value">{emailContent.signedBy}</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td className="popup-details-label">security:</td>
+                      <td className="popup-details-value">
+                        <span className="security-icon">🔒</span> Standard encryption (TLS) 
+                        <a href="#" className="learn-more">Learn more</a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
+        
+        <div className="email-date">
+          {formatDate(emailContent.date)}
+        </div>
+      </div>
+
+      {/* Email body */}
+      <div className="email-body">
+        <div
+          className="email-content"
+          dangerouslySetInnerHTML={{ __html: processedBody }}
+        />
       </div>
     </div>
   );

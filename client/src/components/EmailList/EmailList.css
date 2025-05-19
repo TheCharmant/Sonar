@@ -4,204 +4,222 @@
   flex-direction: column;
   height: 100%;
   background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 0; /* Remove any top margin */
 }
 
-/* Toolbar styles */
-.email-list-toolbar {
+/* Header styling */
+.email-list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 4px; /* Add slight space between header and table */
 }
 
-.toolbar-left, .toolbar-right {
+.header-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.toolbar-btn {
+.checkbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+}
+
+.refresh-button, .more-options-button {
   background: none;
   border: none;
   cursor: pointer;
   padding: 8px;
   border-radius: 50%;
-  color: #5f6368;
-}
-
-.toolbar-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.checkbox-container {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
-.select-checkbox {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
+.refresh-button:hover, .more-options-button:hover {
+  background-color: #f3f4f6;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .pagination-info {
-  color: #5f6368;
+  color: #6b7280;
   font-size: 13px;
 }
 
 .pagination-controls {
   display: flex;
-  gap: 4px;
+  align-items: center;
 }
 
-.pagination-btn {
+.pagination-button {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  color: #5f6368;
+  color: #6b7280;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.pagination-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+.pagination-button:hover:not(:disabled) {
+  color: #374151;
+  background-color: #f3f4f6;
+  border-radius: 4px;
 }
 
-/* Email list styles */
-.email-list {
+.pagination-button:disabled {
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+/* Email list content */
+.email-list-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  padding-top: 4px; /* Add slight padding at the top */
+}
+
+.email-list-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .email-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed; /* Fixed table layout for better control */
 }
 
+/* Email row styling */
 .email-row {
-  border-bottom: 1px solid #f1f3f4;
-  cursor: pointer;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.15s ease;
+  height: 40px; /* Standardize row height */
 }
 
-.email-row:hover {
-  box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
-  z-index: 1;
-  position: relative;
-}
-
-.email-row.selected {
-  background-color: #f2f6fc;
-}
-
+/* Adjust cell widths for better alignment */
 .checkbox-cell, .star-cell {
-  width: 40px;
-  padding: 8px;
+  width: 32px;
+  min-width: 32px;
   text-align: center;
-  vertical-align: middle;
+  padding: 8px 4px;
 }
 
 .sender-cell {
-  width: 180px;
-  padding: 8px 16px;
-  font-weight: 500;
+  width: 200px; /* Increased width for sender/recipient */
+  min-width: 150px;
+  max-width: 200px;
+  padding: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  vertical-align: middle;
+}
+
+.sender-name {
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 160px;
 }
 
 .content-cell {
-  padding: 8px 16px;
-  vertical-align: middle;
-}
-
-.date-cell {
-  width: 100px;
-  padding: 8px 16px;
-  text-align: right;
-  white-space: nowrap;
-  vertical-align: middle;
-  color: #5f6368;
+  padding: 8px;
+  width: auto; /* Take remaining space */
+  min-width: 200px; /* Ensure minimum width */
 }
 
 .email-content {
   display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.subject {
+  font-weight: 500;
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 600px;
+  margin-bottom: 2px;
 }
 
-.company-name {
-  font-weight: 500;
-  margin-right: 4px;
-}
-
-.email-subject {
-  font-weight: 500;
-}
-
-.email-separator {
-  margin: 0 4px;
-  color: #5f6368;
-}
-
-.email-snippet {
-  color: #5f6368;
+.snippet {
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.star-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #e8eaed;
-  padding: 4px;
-  border-radius: 50%;
+.date-cell {
+  width: 100px; /* Fixed width for date */
+  min-width: 100px;
+  padding: 8px 16px 8px 8px;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.star-btn:hover {
-  color: #f8c022;
+.date {
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
+  margin-right: 8px; /* Added margin to move date away from edge */
 }
 
-/* Loading and error states */
-.loading-container, .error-container, .empty-state {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  color: #5f6368;
+/* Loading, error and empty states */
+.loading-state, .error-state, .empty-state {
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
 }
 
-.error-container {
-  color: #d93025;
+.error-state {
+  color: #ef4444;
 }
 
 /* Load more button */
-.load-more-container {
-  display: flex;
-  justify-content: center;
+.load-more {
   padding: 16px;
+  text-align: center;
 }
 
-.load-more-btn {
-  background-color: #f1f3f4;
+.load-more-button {
+  background-color: #c066e8;
+  color: white;
   border: none;
-  border-radius: 4px;
   padding: 8px 16px;
-  cursor: pointer;
-  color: #5f6368;
+  border-radius: 4px;
   font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.load-more-btn:hover {
-  background-color: #e8eaed;
+.load-more-button:hover {
+  background-color: #a855f7;
 }
 
-.load-more-btn:disabled {
-  opacity: 0.7;
+.load-more-button:disabled {
+  background-color: #d1d5db;
   cursor: not-allowed;
 }
 
@@ -228,6 +246,7 @@
   overflow-y: auto;
   padding: 24px;
   position: relative;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .close-modal {
@@ -238,20 +257,168 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #5f6368;
+  color: #6b7280;
+}
+
+.modal-subject {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+.modal-sender {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sender-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-right: 12px;
+}
+
+.sender-info {
+  flex: 1;
+}
+
+.view-full-message {
+  color: #6b7280;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.modal-loading, .modal-error {
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.modal-error {
+  color: #ef4444;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .sender-cell {
     width: 120px;
+    min-width: 80px;
   }
   
   .date-cell {
-    width: 80px;
+    width: 60px;
+    min-width: 60px;
   }
   
-  .email-content {
-    max-width: 300px;
+  .checkbox-cell, .star-cell {
+    width: 28px;
+    min-width: 28px;
   }
 }
+
+@media (max-width: 640px) {
+  .sender-cell {
+    width: 100px;
+    min-width: 70px;
+  }
+  
+  .sender-name {
+    max-width: 90px;
+  }
+  
+  .date-cell {
+    width: 50px;
+    min-width: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* For very small screens, hide checkbox column */
+  .checkbox-cell {
+    display: none;
+  }
+  
+  .sender-cell {
+    width: 80px;
+    min-width: 60px;
+  }
+  
+  .sender-name {
+    max-width: 70px;
+  }
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Star button styling */
+.star-button {
+  background: none;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer;
+  color: #d1d5db;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-button:hover {
+  color: #f59e0b;
+  border: none !important;
+  outline: none !important;
+}
+
+.star-button:focus {
+  border: none !important;
+  outline: none !important;
+}
+
+.star-button.starred {
+  color: #f59e0b;
+}
+
+.star-button.starred svg {
+  fill: #f59e0b;
+  stroke: #f59e0b;
+}
+
+.star-button:hover svg {
+  fill: #f59e0b;
+}
+
+
+
+
+
+
+
+
+

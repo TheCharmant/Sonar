@@ -1,6 +1,7 @@
 import express from "express";
 import { adminLogin, validateToken, getJWTToken } from "../controllers/adminAuthController.js";
 import { requireRole } from "../middlewares/requireRole.js";
+import { isAuthenticated } from "../middleware/auth.js";
 import { auth, db } from '../config/firebase.js';
 
 const router = express.Router();
@@ -11,38 +12,33 @@ router.post("/login", adminLogin);
 // Validate token route
 router.get("/validate", requireRole("admin"), validateToken);
 
-router.post('/custom-token', async (req, res) => {
+// Get JWT token route
+router.post("/get-jwt-token", getJWTToken);
+
+// Get admin profile
+router.get('/profile', isAuthenticated, async (req, res) => {
   try {
-    const { uid } = req.body;
+    const uid = req.user.uid;
     
-    if (!uid) {
-      return res.status(400).json({ error: 'UID is required' });
-    }
-    
-    // Get user from Firestore to verify admin status
+    // Get user from Firestore
     const userDoc = await db.collection('users').doc(uid).get();
     
     if (!userDoc.exists) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User profile not found' });
     }
     
     const userData = userDoc.data();
     
-    // Check if user is an admin
-    if (userData.role !== 'admin') {
-      return res.status(403).json({ error: 'Not an admin' });
-    }
-    
-    // Create a custom token
-    const customToken = await auth.createCustomToken(uid, { role: 'admin' });
-    
-    res.status(200).json({ token: customToken });
+    res.status(200).json({
+      user: {
+        uid: userDoc.id,
+        ...userData
+      }
+    });
   } catch (error) {
-    console.error('Error creating custom token:', error);
-    res.status(500).json({ error: 'Failed to create custom token' });
+    console.error('Error getting admin profile:', error);
+    res.status(500).json({ error: 'Failed to get admin profile' });
   }
 });
-
-router.post('/get-jwt', getJWTToken);
 
 export default router;

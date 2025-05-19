@@ -1,0 +1,331 @@
+/* Reuse the same styles as Dashboard.css */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  padding-top: 80px;
+  background-color: #fff;
+  width: 100%;
+}
+
+/* Sidebar styles - updated for consistent layout */
+.sidebar {
+  width: 240px;
+  background-color: #f8f8f8;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-right: 1px solid #eee;
+  height: calc(100vh - 80px);
+  position: fixed;
+  top: 80px;
+}
+
+.sidebar-nav {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Remove the profile-icon from the top */
+.profile-icon {
+  display: none;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.sidebar-nav li {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  color: #666;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.sidebar-nav li a,
+.sidebar-nav li > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 18px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sidebar-nav li.active {
+  color: #c066e8;
+  background-color: #f8e6ff;
+}
+
+.sidebar-nav li:hover:not(.active) {
+  background-color: #f0f0f0;
+}
+
+/* Main content styles - prevent page scrolling */
+.main-content {
+  flex: 1;
+  padding: 25px;
+  margin-left: 240px; /* Match sidebar width */
+  width: calc(100% - 240px);
+  overflow-y: hidden; /* Prevent page scrolling */
+  height: calc(100vh - 80px); /* Match viewport height minus header */
+}
+
+/* Email header with search */
+.email-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.search-container {
+  position: relative;
+  width: 300px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 10px 10px 40px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: #6a3de8;
+  box-shadow: 0 0 0 2px rgba(106, 61, 232, 0.2);
+}
+
+/* Email list container */
+.email-list-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Email detail container */
+.email-detail-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+}
+
+.back-button-container {
+  margin-bottom: 20px;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #555;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #f0f0f0;
+  color: #6a3de8;
+}
+
+/* Loading and error states */
+.loading-container,
+.error-container {
+  padding: 40px;
+  text-align: center;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.error-message {
+  color: #e53935;
+}
+
+/* Email list styles */
+.email-list {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.email-item {
+  display: flex;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+
+.email-item:hover {
+  background-color: #f9f9f9;
+}
+
+.email-sender {
+  width: 200px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.email-subject {
+  font-weight: 500;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-preview {
+  color: #666;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-date {
+  width: 80px;
+  text-align: right;
+  color: #888;
+  font-size: 0.8rem;
+}
+
+/* Back button styling */
+.back-button-container {
+  margin-bottom: 16px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #5f6368;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+}
+
+.back-button:hover {
+  background-color: #f1f3f4;
+}
+
+/* Sidebar styles - updated colors and profile box size */
+.profile-icon {
+  width: 149px; /* 1.75x larger than previous 85px */
+  height: 149px; /* 1.75x larger than previous 85px */
+  background-color: #c066e8; /* Darker violet color */
+  border-radius: 8px;
+  margin-bottom: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon-placeholder {
+  width: 88px; /* 1.75x larger than previous 50px */
+  height: 88px; /* 1.75x larger than previous 50px */
+  background-color: white;
+  border-radius: 50%;
+}
+
+.sidebar-nav li.active {
+  color: #c066e8; /* Darker violet color matching profile icon */
+  background-color: #f0e6f5; /* Slightly darker background for active state */
+}
+
+.user-name {
+  font-size: 0.85rem; /* Reduced from default size */
+}
+
+.user-email {
+  font-size: 0.75rem; /* Reduced from 0.8rem or 12px */
+}
+
+/* User profile at bottom of sidebar */
+.user-profile-bottom {
+  margin-top: auto;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.user-info-bottom {
+  margin-left: 10px;
+  overflow: hidden;
+}
+
+.user-name {
+  font-weight: bold;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+}
+
+.user-email {
+  font-size: 0.75rem;
+  color: #666;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

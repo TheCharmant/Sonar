@@ -8,7 +8,6 @@ import OutboundMails from "./pages/OutboundMails/OutboundMails";
 import Reports from "./pages/Reports/Reports";
 import AuditLogs from "./pages/AuditLogs/AuditLogs";
 import UserManagement from "./pages/UserManagement/UserManagement";
-import Settings from "./pages/Settings/Settings";
 import AddUser from "./pages/AddUser/AddUser";
 import EditUser from "./pages/EditUser/EditUser";
 import Layout from "./components/Layout/Layout";
@@ -37,7 +36,6 @@ function App() {
               <Route path="/user-management" element={<UserManagement />} />
               <Route path="/add-user" element={<AddUser />} />
               <Route path="/edit-user/:id" element={<EditUser />} />
-              <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>
 

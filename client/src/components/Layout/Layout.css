@@ -27,6 +27,11 @@
   font-weight: 600;
   display: flex;
   align-items: center;
+  color: white;
+}
+
+.app-logo strong {
+  color: white;
 }
 
 .app-logo-icon {
@@ -36,6 +41,31 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Top nav actions */
+.top-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  color: white;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.logout-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Dashboard layout */
@@ -112,36 +142,6 @@
   color: #999;
 }
 
-/* Top nav actions */
-.top-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.logout-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: transparent;
-  color: white;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-.logout-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.logout-button svg {
-  width: 16px;
-  height: 16px;
-}
-
 /* User profile at bottom of sidebar */
 .user-profile-bottom {
   padding: 15px 25px;
@@ -201,19 +201,16 @@
   color: #333;
 }
 
-/* Add CSS variables for consistent colors */
-:root {
-  --primary-purple: #c066e8;
-  --light-purple: #f8e6ff;
-  --dark-purple: #a94fd0;
-  --chart-blue: #4285F4;
-  --chart-yellow: #FBBC05;
-  --chart-red: #EA4335;
-  --text-dark: #333333;
-  --text-medium: #666666;
-  --text-light: #999999;
-  --bg-white: #ffffff;
-  --bg-light: #f9f9f9;
-  --border-light: #f0f0f0;
-}
+
+
+
+
+
+
+
+
+
+
+
+
 

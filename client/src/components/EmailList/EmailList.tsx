@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import type { EmailContent } from "../EmailDetail/EmailDetail";
+import "./EmailList.css";
 
 // Email styles are now in the EmailDetail component
 
@@ -22,6 +23,7 @@ interface EmailPayload {
 }
 
 interface Email {
+  starred: any;
   id: string;
   snippet: string;
   payload: EmailPayload;
@@ -38,9 +40,10 @@ interface EmailListProps {
   folder: "inbox" | "sent";
   onSelectEmail?: (email: EmailContent) => void;
   onError?: (message: string) => void;
+  searchTerm?: string;
 }
 
-const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
+const EmailList = ({ folder, onSelectEmail, onError, searchTerm = "" }: EmailListProps) => {
   const { token } = useAuth();
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,38 +70,24 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
   // Fetch labels when component mounts
   useEffect(() => {
     if (!token) return;
-
+    
     const fetchLabels = async () => {
       try {
-        // Get the backend URL from environment variables, with a fallback
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-        console.log('Using backend URL:', backendUrl);
-
-        const url = new URL(`${backendUrl}/api/email/labels`);
-
-        console.log(`Fetching labels from ${url.toString()}`);
+        const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/labels`);
+        
         const res = await fetch(url.toString(), {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          console.error("Server error fetching labels:", errorData);
-
-          // Don't throw an error for "No tokens found" as we'll handle it in the email fetch
-          if (errorData.error !== "No tokens found") {
-            throw new Error(errorData.error || "Failed to load labels");
-          }
-          return;
-        }
-
+        
+        if (!res.ok) throw new Error("Failed to load labels");
+        
         const data = await res.json();
         setLabels(data.labels);
       } catch (err) {
         console.error("Error fetching labels:", err);
       }
     };
-
+    
     fetchLabels();
   }, [token]);
 
@@ -107,78 +96,36 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
 
     const fetchInitial = async () => {
       try {
-        setLoading(true);
-        setError("");
-
         const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
-
         url.searchParams.set("folder", folder.toUpperCase());
-
+        
         // Add label parameter if selected
         const selectedLabel = new URLSearchParams(window.location.search).get('label');
-
+        
         if (selectedLabel) {
           url.searchParams.set("label", selectedLabel);
         }
 
-        console.log(`Fetching emails from ${url.toString()}`);
         const res = await fetch(url.toString(), {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          console.error("Server error:", errorData);
-
-          // Check if this is a "No tokens found" error
-          if (errorData.error === "No tokens found") {
-            setError("Gmail account not connected. Please connect your Gmail account in settings.");
-          }
-          // Check if this is an "Error processing emails" error
-          else if (errorData.error === "Error processing emails" || errorData.error === "Error fetching emails") {
-            // Use the detailed message if available
-            const detailedMessage = errorData.message || "There was a problem processing your emails";
-            console.error("Detailed error message:", detailedMessage);
-
-            // Check if the error is related to authentication or token issues
-            if (detailedMessage.includes("auth") ||
-                detailedMessage.includes("token") ||
-                detailedMessage.includes("credentials") ||
-                detailedMessage.includes("unauthorized") ||
-                detailedMessage.includes("permission")) {
-              setError("There was a problem with your Gmail authentication. Please reconnect your Gmail account in settings.");
-            } else {
-              setError("There was a problem processing your emails. This could be due to an expired or invalid token. Please reconnect your Gmail account in settings.");
-            }
-          }
-          else if (res.status === 401 || res.status === 403) {
-            const errorMsg = "Your session has expired. Please log in again.";
-            setError(errorMsg);
-            if (onError) onError(errorMsg);
-          }
-          else {
-            const errorMsg = errorData.error || "Failed to load emails";
-            setError(errorMsg);
-            if (onError) onError(errorMsg);
-          }
+        if (res.status === 401 || res.status === 403) {
+          const errorMsg = "Your session has expired. Please log in again.";
+          setError(errorMsg);
+          if (onError) onError(errorMsg);
           return;
         }
 
-        const data: EmailResponse = await res.json();
-
-        // Store emails in localStorage for analytics to use
-        try {
-          localStorage.setItem(`${folder}Emails`, JSON.stringify(data.emails));
-          console.log(`Stored ${data.emails.length} emails in localStorage for ${folder} folder`);
-        } catch (storageError) {
-          console.warn('Failed to store emails in localStorage:', storageError);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to load emails");
         }
 
+        const data: EmailResponse = await res.json();
         setEmails(data.emails);
         setNextPageToken(data.nextPageToken || null);
-
       } catch (err) {
-        console.error("Error fetching emails:", err);
         const errorMsg = err instanceof Error ? err.message : "Failed to load emails";
         setError(errorMsg);
         if (onError) onError(errorMsg);
@@ -195,76 +142,30 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
 
     setLoading(true);
     try {
-      // Get the backend URL from environment variables, with a fallback
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-
-      const url = new URL(`${backendUrl}/api/email/fetch`);
+      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
       url.searchParams.set("folder", folder);
       url.searchParams.set("pageToken", nextPageToken);
 
-      console.log(`Loading more emails from ${url.toString()}`);
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      if (res.status === 401 || res.status === 403) {
+        const errorMsg = "Your session has expired. Please log in again.";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
+        return;
+      }
+
       if (!res.ok) {
         const errorData = await res.json();
-        console.error("Server error loading more emails:", errorData);
-
-        // Check if this is a "No tokens found" error
-        if (errorData.error === "No tokens found") {
-          setError("Gmail account not connected. Please connect your Gmail account in settings.");
-          return;
-        }
-        // Check if this is an "Error processing emails" error
-        else if (errorData.error === "Error processing emails" || errorData.error === "Error fetching emails") {
-          // Use the detailed message if available
-          const detailedMessage = errorData.message || "There was a problem processing your emails";
-          console.error("Detailed error message:", detailedMessage);
-
-          // Check if the error is related to authentication or token issues
-          if (detailedMessage.includes("auth") ||
-              detailedMessage.includes("token") ||
-              detailedMessage.includes("credentials") ||
-              detailedMessage.includes("unauthorized") ||
-              detailedMessage.includes("permission")) {
-            setError("There was a problem with your Gmail authentication. Please reconnect your Gmail account in settings.");
-          } else {
-            setError("There was a problem processing your emails. This could be due to an expired or invalid token. Please reconnect your Gmail account in settings.");
-          }
-          return;
-        }
-        else if (res.status === 401 || res.status === 403) {
-          const errorMsg = "Your session has expired. Please log in again.";
-          setError(errorMsg);
-          if (onError) onError(errorMsg);
-          return;
-        }
-        else {
-          const errorMsg = errorData.error || "Failed to load more emails";
-          setError(errorMsg);
-          if (onError) onError(errorMsg);
-          return;
-        }
+        throw new Error(errorData.error || "Failed to load more emails");
       }
 
       const data: EmailResponse = await res.json();
-
-      // Update emails state
-      const updatedEmails = [...emails, ...data.emails];
-      setEmails(updatedEmails);
-
-      // Store updated emails in localStorage for analytics to use
-      try {
-        localStorage.setItem(`${folder}Emails`, JSON.stringify(updatedEmails));
-        console.log(`Updated localStorage with ${updatedEmails.length} emails for ${folder} folder`);
-      } catch (storageError) {
-        console.warn('Failed to update emails in localStorage:', storageError);
-      }
-
+      setEmails(prev => [...prev, ...data.emails]);
       setNextPageToken(data.nextPageToken || null);
     } catch (err) {
-      console.error("Error loading more emails:", err);
       const errorMsg = err instanceof Error ? err.message : "Failed to load more emails";
       setError(errorMsg);
       if (onError) onError(errorMsg);
@@ -283,46 +184,20 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
         setModalOpen(true);
       }
 
-      // Get the backend URL from environment variables, with a fallback
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-
-      const url = `${backendUrl}/api/email/detail?id=${messageId}`;
-      console.log(`Fetching email detail from ${url}`);
-
       const res = await fetch(
-        url,
+        `${import.meta.env.VITE_BACKEND_URL}/api/email/detail?id=${messageId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      if (res.status === 401 || res.status === 403) {
+        const errorMsg = "Your session has expired. Please log in again.";
+        setError(errorMsg);
+        if (onError) onError(errorMsg);
+        return;
+      }
+
       if (!res.ok) {
         const errorData = await res.json();
-        console.error("Server error fetching email detail:", errorData);
-
-        // Check if this is a "No tokens found" error
-        if (errorData.error === "No tokens found") {
-          throw new Error("Gmail account not connected. Please connect your Gmail account in settings.");
-        }
-        // Check if this is an error with a detailed message
-        else if (errorData.message) {
-          console.error("Detailed error message:", errorData.message);
-
-          // Check if the error is related to authentication or token issues
-          if (errorData.message.includes("auth") ||
-              errorData.message.includes("token") ||
-              errorData.message.includes("credentials") ||
-              errorData.message.includes("unauthorized") ||
-              errorData.message.includes("permission")) {
-            throw new Error("There was a problem with your Gmail authentication. Please reconnect your Gmail account in settings.");
-          }
-        }
-
-        if (res.status === 401 || res.status === 403) {
-          const errorMsg = "Your session has expired. Please log in again.";
-          setError(errorMsg);
-          if (onError) onError(errorMsg);
-          return;
-        }
-
         throw new Error(errorData.error || "Failed to load email");
       }
 
@@ -907,216 +782,181 @@ const EmailList = ({ folder, onSelectEmail, onError }: EmailListProps) => {
     setLoadingEmail(false); // Reset loading state
   };
 
-  if (loading && emails.length === 0) return <div className="p-4">Loading emails...</div>;
-
-  if (error && emails.length === 0) {
-    // Check if this is a "Gmail account not connected" error or token issue
-    if (error.includes("Gmail account not connected") || error.includes("reconnect your Gmail account")) {
-      return (
-        <div className="p-8 text-center">
-          <div className="mb-4 text-amber-600">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold mb-2">Gmail Account Not Connected</h2>
-          <p className="text-gray-600 mb-4">You need to connect your Gmail account to view your emails.</p>
-          <a href="/settings" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 inline-flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-            Go to Settings
-          </a>
-        </div>
-      );
-    }
-
-    // For server errors
-    if (error.includes("500") || error.includes("Server Error")) {
-      return (
-        <div className="p-8 text-center">
-          <div className="mb-4 text-red-600">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold mb-2">Server Error</h2>
-          <p className="text-gray-600 mb-4">There was a problem connecting to the server. Please try again later.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Refresh Page
-          </button>
-        </div>
-      );
-    }
-
-    // Generic error
-    return (
-      <div className="p-8 text-center">
-        <div className="mb-4 text-red-600">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <h2 className="text-xl font-bold mb-2">Error Loading Emails</h2>
-        <p className="text-gray-600 mb-4">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
+  // Add filtering based on searchTerm
+  const filteredEmails = emails.filter(email => {
+    if (!searchTerm) return true;
+    
+    const term = searchTerm.toLowerCase();
+    const headers = email.payload.headers;
+    const subject = headers.find(h => h.name === "Subject")?.value || "";
+    const from = headers.find(h => h.name === "From")?.value || "";
+    const to = headers.find(h => h.name === "To")?.value || "";
+    
+    return subject.toLowerCase().includes(term) || 
+           from.toLowerCase().includes(term) || 
+           to.toLowerCase().includes(term) ||
+           email.snippet.toLowerCase().includes(term);
+  });
 
   return (
-    <div className="h-full">
-
-      <div className="flex h-full">
-        {/* Email List Panel */}
-        <div className="w-full overflow-hidden flex flex-col h-full">
-          {/* Email list header */}
-          <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
-            <h1 className="font-semibold text-gray-700 uppercase text-sm">
-              {folder === "inbox" ? "Inbox" : "Sent"}
-            </h1>
-            <div className="flex space-x-2">
-              <button className="p-1 text-gray-500 hover:text-gray-700">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              </button>
-              <button className="p-1 text-gray-500 hover:text-gray-700">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-            </div>
+    <div className="email-list-container">
+      {/* Email List Header */}
+      <div className="email-list-header">
+        <div className="header-left">
+          <div className="checkbox-header">
+            <input type="checkbox" />
           </div>
-
-          <div className="overflow-auto flex-grow p-2">
-            <ul className="space-y-2">
-            {emails.map((email, index) => {
-              const headers = email.payload.headers;
-              const subject = headers.find(h => h.name === "Subject")?.value || "No Subject";
-              const from = headers.find(h => h.name === "From")?.value || "Unknown Sender";
-              const to = headers.find(h => h.name === "To")?.value || "";
-              const date = headers.find(h => h.name === "Date")?.value || "No Date";
-
-              // Format the date
-              const formattedDate = new Date(date).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric'
-              });
-
-              // For sent emails, show recipient instead of sender
-              const displayName = folder === "sent"
-                ? (to.split('<')[0].trim() || to)
-                : (from.split('<')[0].trim() || from);
-
-              return (
-                <li
-                  key={`${email.id}-${index}`}
-                  className={`border-b py-2 px-3 hover:bg-gray-100 cursor-pointer ${
-                    selectedEmailContent && email.id === selectedEmailContent.id ? 'bg-blue-50' : ''
-                  }`}
-                  onClick={() => fetchFullEmail(email.id)}>
-                  <div className="flex items-start">
-                    <div className="flex-grow">
-                      <div className="flex justify-between">
-                        <span className="font-semibold text-sm truncate max-w-[200px] inline-block">
-                          {folder === "sent" ? `To: ${displayName}` : displayName}
-                        </span>
-                        <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{formattedDate}</span>
-                      </div>
-                      <div className="text-sm font-medium truncate">{subject}</div>
-                      <p className="text-xs text-gray-500 truncate">{email.snippet}</p>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-
-          {nextPageToken && (
-            <div className="text-center mt-4">
-              <button
-                onClick={loadMoreEmails}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 text-sm"
-                disabled={loading}
-              >
-                {loading ? "Loading..." : "Load More Emails"}
-              </button>
-            </div>
+          <button className="refresh-button" onClick={() => window.location.reload()}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+          <button className="more-options-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+          </button>
+        </div>
+        <div className="pagination-info">
+          {filteredEmails.length > 0 && (
+            <span>1-{filteredEmails.length} of {filteredEmails.length}+</span>
           )}
-          </div>
         </div>
       </div>
 
-      {/* For mobile, we'll use the onSelectEmail prop instead of showing a modal */}
-      {modalOpen && selectedEmailContent && (
-        <div className="md:hidden fixed inset-0 bg-white z-50 flex flex-col">
-          <div className="p-2 border-b flex justify-between items-center">
+      {/* Email List Content */}
+      <div className="email-list-content">
+        {loading && emails.length === 0 ? (
+          <div className="loading-state">Loading emails...</div>
+        ) : error ? (
+          <div className="error-state">{error}</div>
+        ) : emails.length === 0 ? (
+          <div className="empty-state">No emails found</div>
+        ) : (
+          <table className="email-table">
+            <tbody>
+              {filteredEmails.map((email, index) => {
+                const headers = email.payload.headers;
+                const subject = headers.find(h => h.name === "Subject")?.value || "No Subject";
+                const from = headers.find(h => h.name === "From")?.value || "Unknown Sender";
+                const to = headers.find(h => h.name === "To")?.value || "";
+                const date = headers.find(h => h.name === "Date")?.value || "No Date";
+
+                // Format the date
+                const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                });
+
+                // For sent emails, show recipient instead of sender
+                const displayName = folder === "sent"
+                  ? `To: ${to.split('<')[0].trim() || to}`
+                  : (from.split('<')[0].trim() || from);
+
+                const isSelected = selectedEmailContent && email.id === selectedEmailContent.id;
+
+                return (
+                  <tr 
+                    key={`${email.id}-${index}`}
+                    className={`email-row ${isSelected ? 'selected' : ''}`}
+                    onClick={() => fetchFullEmail(email.id)}
+                  >
+                    <td className="checkbox-cell">
+                      <div className="checkbox" onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" />
+                      </div>
+                    </td>
+                    <td className="star-cell">
+                      <button 
+                        className={`star-button ${email.starred ? 'starred' : ''}`} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Toggle star logic would go here
+                        }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                      </button>
+                    </td>
+                    <td className="sender-cell">
+                      <span className="sender-name">
+                        {displayName}
+                      </span>
+                    </td>
+                    <td className="content-cell">
+                      <div className="email-content">
+                        <span className="subject">{subject}</span>
+                        <span className="snippet">{email.snippet}</span>
+                      </div>
+                    </td>
+                    <td className="date-cell">
+                      <span className="date">{formattedDate}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+
+        {nextPageToken && (
+          <div className="load-more">
             <button
-              onClick={() => {
-                closeModal();
-                // This will trigger navigation to the detail view if onSelectEmail is provided
-                if (onSelectEmail) {
-                  onSelectEmail(selectedEmailContent);
-                }
-              }}
-              className="p-2 text-gray-500 flex items-center">
-              <span>View Full Email</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <button
-              onClick={closeModal}
-              className="p-2 text-gray-500">
-              Close
+              onClick={loadMoreEmails}
+              className="load-more-button"
+              disabled={loading}
+            >
+              {loading ? "Loading..." : "Load More"}
             </button>
           </div>
+        )}
+      </div>
 
-          {loadingEmail ? (
-            <div className="flex-grow flex justify-center items-center">
-              <p>Loading email...</p>
-            </div>
-          ) : selectedEmailContent ? (
-            <div className="flex-grow overflow-auto p-4">
-              <h1 className="text-xl font-bold mb-3">{selectedEmailContent.subject}</h1>
-              <p className="text-gray-500 mb-4">Click "View Full Email" to see the complete message</p>
-
-              <div className="flex items-center mb-2">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mr-3">
-                  {folder === "sent"
-                    ? (selectedEmailContent.to?.charAt(0) || "T").toUpperCase()
-                    : selectedEmailContent.from.charAt(0).toUpperCase()
-                  }
-                </div>
-                <div>
-                  {folder === "sent" ? (
-                    <div className="font-medium">To: <span>{selectedEmailContent.to}</span></div>
-                  ) : (
-                    <div className="font-medium">From: <span>{selectedEmailContent.from}</span></div>
-                  )}
-                  <div className="text-xs text-gray-500">
-                    {new Date(selectedEmailContent.date).toLocaleString()}
+      {/* Mobile Email Modal - functionality unchanged */}
+      {modalOpen && selectedEmailContent && (
+        <div className="email-modal">
+          <div className="modal-content">
+            <button className="close-modal" onClick={closeModal}>×</button>
+            {loadingEmail ? (
+              <div className="modal-loading">Loading email...</div>
+            ) : selectedEmailContent ? (
+              <div className="modal-email-content">
+                <h2 className="modal-subject">{selectedEmailContent.subject}</h2>
+                <div className="modal-sender">
+                  <div className="sender-avatar">
+                    {folder === "sent"
+                      ? (selectedEmailContent.to?.charAt(0) || "T").toUpperCase()
+                      : selectedEmailContent.from.charAt(0).toUpperCase()
+                    }
+                  </div>
+                  <div className="sender-info">
+                    {folder === "sent" ? (
+                      <div className="sender-name">To: <span>{selectedEmailContent.to}</span></div>
+                    ) : (
+                      <div className="sender-name">From: <span>{selectedEmailContent.from}</span></div>
+                    )}
+                    <div className="sender-date">
+                      {new Date(selectedEmailContent.date).toLocaleString()}
+                    </div>
                   </div>
                 </div>
+                <p className="view-full-message">Click "View Full Email" to see the complete message</p>
               </div>
-            </div>
-          ) : (
-            <div className="flex-grow flex justify-center items-center">
-              <p className="text-red-500">Failed to load email</p>
-            </div>
-          )}
+            ) : (
+              <div className="modal-error">Failed to load email</div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 };
+
 export default EmailList;
+

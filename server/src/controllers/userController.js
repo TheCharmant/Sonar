@@ -257,3 +257,29 @@ export const activateUser = async (req, res) => {
     res.status(500).json({ error: 'Failed to activate user' });
   }
 };
+
+// Get current user profile
+export const getCurrentUserProfile = async (req, res) => {
+  try {
+    const uid = req.user.uid;
+    
+    // Get user from Firestore
+    const userDoc = await db.collection('users').doc(uid).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+    
+    const userData = userDoc.data();
+    
+    res.status(200).json({
+      user: {
+        uid: userDoc.id,
+        ...userData
+      }
+    });
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    res.status(500).json({ error: 'Failed to get user profile' });
+  }
+};

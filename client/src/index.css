@@ -3,9 +3,23 @@
   line-height: 1.5;
   font-weight: 400;
 
+  /* Soñar color palette */
+  --primary-purple: #c066e8;
+  --light-purple: #f8e6ff;
+  --dark-purple: #a94fd0;
+  --chart-blue: #4285F4;
+  --chart-yellow: #FBBC05;
+  --chart-red: #EA4335;
+  --text-dark: #333333;
+  --text-medium: #666666;
+  --text-light: #999999;
+  --bg-white: #ffffff;
+  --bg-light: #f9f9f9;
+  --border-light: #f0f0f0;
+
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: var(--text-dark);
+  background-color: var(--bg-white);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
+import { useAuth } from "../../AuthContext"
 import {
   LayoutGrid,
   ArrowDownLeft,
@@ -9,7 +10,6 @@ import {
   BarChart2,
   ClipboardList,
   Users,
-  SettingsIcon,
   LogOut,
 } from "lucide-react"
 import "./Layout.css"
@@ -17,10 +17,35 @@ import "./Layout.css"
 const Layout = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const [user] = useState({
-    name: "Powerpuff Cuties",
-    email: "powerpuffs@gmail.com",
-  })
+  const { token, user } = useAuth()
+  const [userProfile, setUserProfile] = useState(null)
+  
+  // Fetch user profile when component mounts
+  useEffect(() => {
+    if (token) {
+      fetchUserProfile()
+    }
+  }, [token])
+  
+  // Fetch user profile data
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/auth/profile`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch user profile")
+      }
+      
+      const data = await response.json()
+      setUserProfile(data.user)
+    } catch (error) {
+      console.error("Error fetching user profile:", error)
+    }
+  }
 
   const isActive = (path) => {
     return location.pathname === path ? "active" : ""
@@ -41,87 +66,102 @@ const Layout = () => {
         return "Audit Logs"
       case "/user-management":
         return "User Management"
-      case "/settings":
-        return "Settings"
       default:
         return "Dashboard"
     }
   }
 
+  // Get user initials for avatar
+  const getInitials = () => {
+    if (userProfile && userProfile.name) {
+      return userProfile.name.charAt(0).toUpperCase();
+    }
+    return "A";
+  }
+
   return (
-    <div className="layout">
-      <aside className="sidebar">
-        <div className="logo">
-          <img src="/logo.png" alt="Soñar" />
-          <h1>Soñar</h1>
+    <div className="app-container">
+      {/* Fixed Violet Header */}
+      <div className="app-header">
+        <h1 className="app-logo">
+          <span className="app-logo-icon">🌙</span>
+          <strong>SOÑAR</strong>
+        </h1>
+        <div className="top-nav-actions">
+          <button
+            className="logout-button"
+            onClick={() => {
+              localStorage.removeItem("isAuthenticated")
+              navigate("/login")
+            }}
+          >
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
         </div>
+      </div>
 
-        <nav className="nav-menu">
-          <Link to="/dashboard" className={`nav-item ${isActive("/dashboard")}`}>
-            <LayoutGrid size={20} />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link to="/inbound-mails" className={`nav-item ${isActive("/inbound-mails")}`}>
-            <ArrowDownLeft size={20} />
-            <span>Inbound Mails</span>
-          </Link>
-
-          <Link to="/outbound-mails" className={`nav-item ${isActive("/outbound-mails")}`}>
-            <ArrowUpRight size={20} />
-            <span>Outbound Mails</span>
-          </Link>
-
-          <Link to="/reports" className={`nav-item ${isActive("/reports")}`}>
-            <BarChart2 size={20} />
-            <span>Reports</span>
-          </Link>
-
-          <Link to="/audit-logs" className={`nav-item ${isActive("/audit-logs")}`}>
-            <ClipboardList size={20} />
-            <span>Audit Logs</span>
-          </Link>
-
-          <Link to="/user-management" className={`nav-item ${isActive("/user-management")}`}>
-            <Users size={20} />
-            <span>User Management</span>
-          </Link>
-
-          <Link to="/settings" className={`nav-item ${isActive("/settings")}`}>
-            <SettingsIcon size={20} />
-            <span>Settings</span>
-          </Link>
-        </nav>
-
-        <div className="user-profile">
-          <div className="avatar">
-            <img src="/placeholder.svg?height=40&width=40" alt="User" />
+      <div className="dashboard-layout">
+        {/* Sidebar */}
+        <aside className="sidebar">
+          <nav className="sidebar-nav">
+            <ul>
+              <li className={isActive("/dashboard")}>
+                <Link to="/dashboard" className="nav-item">
+                  <LayoutGrid size={20} className="nav-icon" />
+                  <span>Dashboard</span>
+                </Link>
+              </li>
+              <li className={isActive("/inbound-mails")}>
+                <Link to="/inbound-mails" className="nav-item">
+                  <ArrowDownLeft size={20} className="nav-icon" />
+                  <span>Inbound Mails</span>
+                </Link>
+              </li>
+              <li className={isActive("/outbound-mails")}>
+                <Link to="/outbound-mails" className="nav-item">
+                  <ArrowUpRight size={20} className="nav-icon" />
+                  <span>Outbound Mails</span>
+                </Link>
+              </li>
+              <li className={isActive("/reports")}>
+                <Link to="/reports" className="nav-item">
+                  <BarChart2 size={20} className="nav-icon" />
+                  <span>Reports</span>
+                </Link>
+              </li>
+              <li className={isActive("/audit-logs")}>
+                <Link to="/audit-logs" className="nav-item">
+                  <ClipboardList size={20} className="nav-icon" />
+                  <span>Audit Logs</span>
+                </Link>
+              </li>
+              <li className={isActive("/user-management")}>
+                <Link to="/user-management" className="nav-item">
+                  <Users size={20} className="nav-icon" />
+                  <span>User Management</span>
+                </Link>
+              </li>
+            </ul>
+          </nav>
+          
+          {/* User profile at bottom of sidebar */}
+          <div className="user-profile-bottom">
+            <div className="avatar-circle" style={{backgroundColor: '#c066e8'}}>
+              {getInitials()}
+            </div>
+            <div className="user-info-bottom">
+              <p className="user-name">{userProfile?.name || "Admin User"}</p>
+              <p className="user-email">{userProfile?.email || "admin@example.com"}</p>
+            </div>
           </div>
-          <div className="user-info">
-            <h4>{user.name}</h4>
-            <p>{user.email}</p>
-          </div>
+        </aside>
+
+        <div className="main-content">
+          <div className="page-title">{getPageTitle()}</div>
+          <Outlet />
         </div>
-      </aside>
-
-      <main className="content">
-        <div className="top-nav">
-          <div className="top-nav-title">{getPageTitle()}</div>
-          <div className="top-nav-actions">
-            <button
-              className="logout-button"
-              onClick={() => {
-                localStorage.removeItem("isAuthenticated")
-                navigate("/login")
-              }}
-            >
-              <LogOut size={18} />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-        <Outlet />
-      </main>
+      </div>
     </div>
   )
 }

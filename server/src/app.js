@@ -8,6 +8,7 @@ import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import auditLogRoutes from "./routes/auditlogRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import jwt from 'jsonwebtoken';
 
 // Load environment variables
 dotenv.config();
@@ -46,7 +47,6 @@ app.use((req, res, next) => {
     
     // Try to decode without verification to see what's in the token
     try {
-      const jwt = require('jsonwebtoken');
       const decoded = jwt.decode(token);
       console.log('Token payload:', JSON.stringify(decoded));
     } catch (error) {
@@ -62,7 +62,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/email', emailRoutes);
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/users", userRoutes);
+app.use('/api/user', userRoutes);
 app.use("/api/auditlogs", auditLogRoutes);
 
 // Add this after registering all routes
@@ -80,7 +80,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       email: '/api/email',
       admin: '/api/admin',
-      users: '/api/users',
+      users: '/api/user',
       auditlogs: '/api/auditlogs'
     }
   });
