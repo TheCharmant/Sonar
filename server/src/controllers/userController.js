@@ -283,3 +283,68 @@ export const getCurrentUserProfile = async (req, res) => {
     res.status(500).json({ error: 'Failed to get user profile' });
   }
 };
+
+// Permanently delete user from database - updated to match pattern in other controller methods
+export const permanentlyDeleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`Attempting to permanently delete user with ID: ${id}`);
+    
+    // Check if user exists in Firestore - same pattern as in getUserById
+    const userDoc = await db.collection('users').doc(id).get();
+    if (!userDoc.exists) {
+      console.log(`User document not found in Firestore: ${id}`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const userData = userDoc.data();
+    console.log(`Found user in Firestore: ${userData.email}`);
+    
+    try {
+      // Try to delete user from Firebase Auth
+      await auth.deleteUser(id);
+      console.log(`Successfully deleted user from Firebase Auth: ${id}`);
+    } catch (authError) {
+      // If user doesn't exist in Auth but exists in Firestore, continue with Firestore deletion
+      console.warn(`Error deleting from Firebase Auth: ${authError.message}. Continuing with Firestore deletion.`);
+      if (authError.code !== 'auth/user-not-found') {
+        throw authError;
+      }
+    }
+    
+    // Delete user document from Firestore
+    await db.collection('users').doc(id).delete();
+    console.log(`Successfully deleted user document from Firestore: ${id}`);
+    
+    // Create audit log
+    await createAuditLog({
+      type: AuditLogTypes.USER_MGMT,
+      action: AuditLogActions.USER_DELETED,
+      performedBy: req.user.uid,
+      details: {
+        userId: id,
+        userEmail: userData.email,
+        userName: userData.name,
+        userRole: userData.role
+      }
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'User permanently deleted' 
+    });
+  } catch (error) {
+    console.error('Error in permanentlyDeleteUser:', error);
+    
+    // Handle specific Firebase errors
+    if (error.code === 'auth/user-not-found') {
+      return res.status(404).json({ error: 'User not found in authentication system' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to delete user', 
+      message: error.message 
+    });
+  }
+};

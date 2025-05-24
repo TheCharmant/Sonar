@@ -175,7 +175,7 @@ npm run dev
    ```bash
    # Run all applications (server, client, admin) concurrently
    cd server
-   npm run dev:all
+   npm run dev:open
    ```
 3. Build the applications for production:
    ```bash
@@ -199,4 +199,153 @@ npm run dev
 - [Express.js Documentation](https://expressjs.com/)
 - [React Documentation](https://reactjs.org/docs/getting-started.html)
 - [Vite Documentation](https://vitejs.dev/guide/)
+
+## Deployment
+
+### Deployment Options
+
+You can deploy this full-stack application using various cloud providers:
+
+#### Option 1: Render.com (Recommended for simplicity)
+
+1. **Server (Backend) Deployment**:
+   - Create a new Web Service on Render
+   - Connect your GitHub repository
+   - Set the root directory to `server`
+   - Set build command: `npm install`
+   - Set start command: `npm start`
+   - Add all environment variables from your `.env` file
+   - Deploy
+
+2. **Client (Frontend) Deployment**:
+   - Create a new Static Site on Render
+   - Connect your GitHub repository
+   - Set the root directory to `client`
+   - Set build command: `npm install && npm run build`
+   - Set publish directory: `dist`
+   - Add environment variable: `VITE_API_URL=https://your-backend-url.onrender.com/api`
+   - Deploy
+
+3. **Admin Panel Deployment**:
+   - Create a new Static Site on Render
+   - Connect your GitHub repository
+   - Set the root directory to `admin`
+   - Set build command: `npm install && npm run build`
+   - Set publish directory: `dist`
+   - Add environment variable: `VITE_BACKEND_URL=https://your-backend-url.onrender.com`
+   - Deploy
+
+#### Option 2: Vercel + Railway
+
+1. **Server (Backend) Deployment on Railway**:
+   - Create a new project on Railway
+   - Connect your GitHub repository
+   - Set the root directory to `server`
+   - Add all environment variables from your `.env` file
+   - Deploy
+
+2. **Client & Admin Deployment on Vercel**:
+   - Create two new projects on Vercel
+   - Connect your GitHub repository for each
+   - For client: Set the root directory to `client`
+   - For admin: Set the root directory to `admin`
+   - Add appropriate environment variables
+   - Deploy
+
+#### Option 3: AWS Deployment
+
+1. **Server Deployment on AWS Elastic Beanstalk**:
+   - Create a new application in Elastic Beanstalk
+   - Choose Node.js platform
+   - Upload a zip of your server directory
+   - Configure environment variables
+   - Deploy
+
+2. **Client & Admin Deployment on AWS S3 + CloudFront**:
+   - Build your client and admin applications
+   - Create two S3 buckets
+   - Upload the build files to respective buckets
+   - Set up CloudFront distributions for each bucket
+   - Configure environment variables
+
+### Preparing for Production
+
+Before deploying, make these changes:
+
+1. **Update CORS settings in server/src/app.js**:
+   ```javascript
+   // Update allowed origins to include your production URLs
+   const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+   ```
+
+2. **Update API URLs in client and admin .env files**:
+   ```
+   # For client/.env.production
+   VITE_API_URL=https://your-production-api-url.com/api
+   
+   # For admin/.env.production
+   VITE_BACKEND_URL=https://your-production-api-url.com
+   ```
+
+3. **Set up production environment variables**:
+   - Create `.env.production` files for each application
+   - Never commit these files to version control
+
+### Continuous Deployment
+
+For automated deployments:
+
+1. **GitHub Actions**:
+   - Create `.github/workflows/deploy.yml` in your repository
+   - Configure separate jobs for server, client, and admin
+   - Set up environment secrets in GitHub repository settings
+
+2. **Example GitHub Actions workflow**:
+   ```yaml
+   name: Deploy
+   
+   on:
+     push:
+       branches: [ main ]
+   
+   jobs:
+     deploy-server:
+       runs-on: ubuntu-latest
+       steps:
+         # Server deployment steps
+         
+     deploy-client:
+       runs-on: ubuntu-latest
+       steps:
+         # Client deployment steps
+         
+     deploy-admin:
+       runs-on: ubuntu-latest
+       steps:
+         # Admin deployment steps
+   ```
+
+### Domain Configuration
+
+1. **Custom Domain Setup**:
+   - Purchase a domain (e.g., from Namecheap, GoDaddy, etc.)
+   - Configure DNS settings:
+     - Point main domain to client application
+     - Create subdomain for admin (e.g., admin.yourdomain.com)
+     - Create subdomain for API (e.g., api.yourdomain.com)
+   
+2. **SSL Certificates**:
+   - Set up SSL certificates for all domains/subdomains
+   - Most platforms (Render, Vercel, etc.) provide this automatically
+   - For AWS, use AWS Certificate Manager
+
+### Post-Deployment Checklist
+
+- [ ] Test all application features in production environment
+- [ ] Verify all API endpoints are working correctly
+- [ ] Check authentication flows
+- [ ] Ensure proper error handling
+- [ ] Monitor application performance
+- [ ] Set up logging and analytics
+- [ ] Configure backup strategies for databases
 

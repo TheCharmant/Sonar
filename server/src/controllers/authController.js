@@ -61,6 +61,8 @@ export const googleLogin = async (req, res) => {
 export const checkGmailConnection = async (req, res) => {
   try {
     const uid = req.user.uid;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
     console.log(`Checking Gmail connection for user: ${uid}`);
 
     // Check if the user has OAuth tokens stored
@@ -68,6 +70,19 @@ export const checkGmailConnection = async (req, res) => {
 
     if (!tokenDoc.exists) {
       console.log(`No OAuth tokens found for user: ${uid}`);
+      
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: "gmail_connection_check",
+        performedBy: uid,
+        details: {
+          result: "not_connected",
+          ipAddress,
+          userAgent
+        },
+        severity: LogSeverity.INFO
+      });
+      
       return res.json({ gmailConnected: false });
     }
 
@@ -86,12 +101,39 @@ export const checkGmailConnection = async (req, res) => {
 
     console.log(`Gmail connection status for user ${uid}: ${isConnected ? 'Connected' : 'Not connected'}`);
 
+    await createAuditLog({
+      type: AuditLogTypes.AUTH,
+      action: "gmail_connection_check",
+      performedBy: uid,
+      details: {
+        result: isConnected ? "connected" : "not_connected",
+        email: isConnected ? tokenData.gmail_email : null,
+        ipAddress,
+        userAgent
+      },
+      severity: LogSeverity.INFO
+    });
+
     return res.json({
       gmailConnected: isConnected,
       email: isConnected ? tokenData.gmail_email : null
     });
   } catch (error) {
     console.error("Error checking Gmail connection:", error);
+    
+    await createAuditLog({
+      type: AuditLogTypes.AUTH,
+      action: AuditLogActions.ACCESS_DENIED,
+      performedBy: req.user?.uid || "unknown",
+      details: {
+        reason: "Gmail connection check failed",
+        error: error.message,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent']
+      },
+      severity: LogSeverity.ERROR
+    });
+    
     res.status(500).json({ error: "Failed to check Gmail connection status" });
   }
 };
@@ -100,6 +142,8 @@ export const checkGmailConnection = async (req, res) => {
 export const connectGmail = async (req, res) => {
   try {
     const uid = req.user.uid;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
     console.log(`Generating Gmail connection URL for user: ${uid}`);
 
     // Generate a state token that includes the user's UID
@@ -114,13 +158,30 @@ export const connectGmail = async (req, res) => {
       action: "gmail_connection_initiated",
       performedBy: uid,
       details: {
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+        ipAddress,
+        userAgent
+      },
+      severity: LogSeverity.INFO
     });
 
     res.json({ authUrl });
   } catch (error) {
     console.error("Error generating Gmail connection URL:", error);
+    
+    await createAuditLog({
+      type: AuditLogTypes.AUTH,
+      action: AuditLogActions.ACCESS_DENIED,
+      performedBy: req.user?.uid || "unknown",
+      details: {
+        reason: "Gmail connection URL generation failed",
+        error: error.message,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent']
+      },
+      severity: LogSeverity.ERROR
+    });
+    
     res.status(500).json({ error: "Failed to generate Gmail connection URL" });
   }
 };
@@ -129,12 +190,25 @@ export const connectGmail = async (req, res) => {
 export const disconnectGmail = async (req, res) => {
   try {
     const uid = req.user.uid;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
     console.log(`Disconnecting Gmail for user: ${uid}`);
 
     // Check if the user has OAuth tokens stored
     const tokenDoc = await db.collection("oauth_tokens").doc(uid).get();
 
     if (!tokenDoc.exists) {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.ACCESS_DENIED,
+        performedBy: uid,
+        details: {
+          reason: "No Gmail connection found",
+          ipAddress,
+          userAgent
+        },
+        severity: LogSeverity.INFO
+      });
       return res.status(404).json({ error: "No Gmail connection found" });
     }
 
@@ -147,13 +221,30 @@ export const disconnectGmail = async (req, res) => {
       action: "gmail_disconnected",
       performedBy: uid,
       details: {
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+        ipAddress,
+        userAgent
+      },
+      severity: LogSeverity.INFO
     });
 
     res.json({ success: true, message: "Gmail disconnected successfully" });
   } catch (error) {
     console.error("Error disconnecting Gmail:", error);
+    
+    await createAuditLog({
+      type: AuditLogTypes.AUTH,
+      action: AuditLogActions.ACCESS_DENIED,
+      performedBy: req.user?.uid || "unknown",
+      details: {
+        reason: "Gmail disconnection failed",
+        error: error.message,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent']
+      },
+      severity: LogSeverity.ERROR
+    });
+    
     res.status(500).json({ error: "Failed to disconnect Gmail" });
   }
 };

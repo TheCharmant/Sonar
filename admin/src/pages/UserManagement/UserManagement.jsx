@@ -21,6 +21,8 @@ const UserManagement = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showActivateConfirmDialog, setShowActivateConfirmDialog] = useState(false);
   const [userToActivate, setUserToActivate] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
 
   useEffect(() => {
     // Get the token from localStorage
@@ -301,6 +303,104 @@ const UserManagement = () => {
     }
   };
 
+  // Add delete user function
+  const handleDeleteUser = (user) => {
+    console.log("User to delete:", user);
+    setUserToDelete(user);
+    setShowDeleteConfirmDialog(true);
+  };
+
+  // Confirm delete function
+  const confirmDelete = () => {
+    permanentlyDeleteUser(userToDelete.id);
+    setShowDeleteConfirmDialog(false);
+    setUserToDelete(null);
+  };
+
+  // Delete user function using the existing endpoint
+  const deleteUser = async (userId) => {
+    try {
+      // Get the JWT token from localStorage
+      const token = localStorage.getItem("adminToken");
+      
+      if (!token) {
+        setError("Authentication token not found. Please log in again.");
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+        return;
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/users-jwt/${userId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete user");
+      }
+      
+      // Update local state - remove the user from the list
+      setUsers(users.filter(user => user.id !== userId));
+      
+      setSuccessMessage("User deleted successfully");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      setError(err.message);
+    }
+  };
+
+  // Add permanent delete function
+  const permanentlyDeleteUser = async (userId) => {
+    try {
+      setLoading(true);
+      // Get the token from localStorage if not available from context
+      const authToken = token || localStorage.getItem('adminToken');
+      
+      if (!authToken) {
+        throw new Error("Authentication token not found. Please log in again.");
+      }
+      
+      console.log(`Attempting to permanently delete user with ID: ${userId}`);
+      
+      // Use the same URL pattern as in EditUser.jsx
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/admin/users-jwt/${userId}/permanent`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+      
+      // Check if response is ok before trying to parse JSON
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ 
+          error: `HTTP error ${response.status}` 
+        }));
+        throw new Error(errorData.error || `Failed to delete user (${response.status})`);
+      }
+      
+      const data = await response.json();
+      console.log("Delete user success:", data);
+      
+      // Update local state - remove the user from the list
+      setUsers(users.filter(user => user.id !== userId));
+      
+      setSuccessMessage("User permanently deleted");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      console.error("Error permanently deleting user:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="user-management-container">
       {showErrorToast && error && (
@@ -371,13 +471,6 @@ const UserManagement = () => {
           <Plus size={16} className="add-user-icon" />
           <span>Add New User</span>
         </Link>
-        <button 
-          className="test-auth-button"
-          onClick={testAuthentication}
-          style={{ marginLeft: '10px', padding: '8px 12px', background: '#f0f0f0', border: '1px solid #ddd', borderRadius: '4px' }}
-        >
-          Test Auth
-        </button>
       </div>
 
       {/* Move error message to a toast notification instead of displaying in the page */}
@@ -438,10 +531,13 @@ const UserManagement = () => {
                       </Link>
                     </td>
                     <td>
-                      <Link to={`/edit-user/${user.id}`} className="action-button">
-                        <UserCog size={16} />
-                        <span>Change role</span>
-                      </Link>
+                      <button 
+                        onClick={() => handleDeleteUser(user)} 
+                        className="action-button delete-button"
+                      >
+                        <Trash2 size={16} />
+                        <span>Delete</span>
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -504,6 +600,33 @@ const UserManagement = () => {
                 onClick={confirmActivate}
               >
                 Activate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirmDialog && (
+        <div className="confirm-dialog-overlay">
+          <div className="confirm-dialog">
+            <h3>Permanently Delete User</h3>
+            <p>Are you sure you want to <strong>permanently delete</strong> user <strong>{userToDelete?.name}</strong>?</p>
+            <p className="warning-text">This action will completely remove the user from the database and cannot be undone.</p>
+            <div className="confirm-dialog-buttons">
+              <button 
+                className="cancel-button"
+                onClick={() => {
+                  setShowDeleteConfirmDialog(false);
+                  setUserToDelete(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-button delete-button"
+                onClick={confirmDelete}
+              >
+                Permanently Delete
               </button>
             </div>
           </div>

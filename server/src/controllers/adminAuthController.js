@@ -1,6 +1,6 @@
 import { auth, db } from "../config/firebase.js";
 import jwt from "jsonwebtoken";
-import { createAuditLog, AuditLogTypes, AuditLogActions } from "../utils/auditLogger.js";
+import { createAuditLog, AuditLogTypes, AuditLogActions, LogSeverity } from "../utils/auditLogger.js";
 
 // Generate JWT token with improved security
 const generateToken = (uid, role, email) => {
@@ -182,8 +182,21 @@ export const validateToken = async (req, res) => {
 export const getJWTToken = async (req, res) => {
   try {
     const { token } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
     
     if (!token) {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.TOKEN_GENERATION_FAILED,
+        performedBy: "unknown",
+        details: {
+          reason: "Missing Firebase ID token",
+          ipAddress,
+          userAgent
+        },
+        severity: LogSeverity.WARNING
+      });
       return res.status(400).json({ error: "Missing Firebase ID token" });
     }
     
@@ -195,17 +208,56 @@ export const getJWTToken = async (req, res) => {
     const userDoc = await db.collection("users").doc(uid).get();
     
     if (!userDoc.exists) {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.TOKEN_GENERATION_FAILED,
+        performedBy: uid,
+        details: {
+          email,
+          reason: "User not found",
+          ipAddress,
+          userAgent
+        },
+        severity: LogSeverity.WARNING
+      });
       return res.status(404).json({ error: "User not found" });
     }
     
     const userData = userDoc.data();
     
     if (userData.role !== "admin") {
+      await createAuditLog({
+        type: AuditLogTypes.AUTH,
+        action: AuditLogActions.TOKEN_GENERATION_FAILED,
+        performedBy: uid,
+        details: {
+          email,
+          reason: "Insufficient permissions",
+          role: userData.role,
+          ipAddress,
+          userAgent
+        },
+        severity: LogSeverity.WARNING
+      });
       return res.status(403).json({ error: "Insufficient permissions" });
     }
     
     // Generate JWT token
     const jwtToken = generateToken(uid, "admin", email);
+    
+    // Log successful token generation
+    await createAuditLog({
+      type: AuditLogTypes.AUTH,
+      action: AuditLogActions.TOKEN_GENERATED,
+      performedBy: uid,
+      details: {
+        email,
+        role: "admin",
+        ipAddress,
+        userAgent
+      },
+      severity: LogSeverity.INFO
+    });
     
     res.status(200).json({
       token: jwtToken,
@@ -218,6 +270,20 @@ export const getJWTToken = async (req, res) => {
     });
   } catch (error) {
     console.error("Error generating JWT token:", error);
+    
+    // Log token generation failure
+    await createAuditLog({
+      type: AuditLogTypes.AUTH,
+      action: AuditLogActions.TOKEN_GENERATION_FAILED,
+      performedBy: "unknown",
+      details: {
+        error: error.message,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent']
+      },
+      severity: LogSeverity.ERROR
+    });
+    
     res.status(500).json({ error: "Authentication failed" });
   }
 };

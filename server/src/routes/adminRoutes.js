@@ -6,6 +6,7 @@ import {
   updateUser, 
   deleteUser, 
   activateUser,
+  permanentlyDeleteUser,
 } from '../controllers/userController.js';
 import { generatePasswordResetLink } from '../controllers/adminController.js';
 import { isAuthenticated, isAdmin, verifyAdminForUserCreation } from '../middleware/auth.js';
@@ -77,6 +78,7 @@ router.post('/users', verifyAdminForUserCreation, createUser);
 router.put('/users/:id', isAuthenticated, isAdmin, updateUser);
 router.delete('/users/:id', isAuthenticated, isAdmin, deleteUser);
 router.put('/users/:id/activate', isAuthenticated, isAdmin, activateUser);
+router.delete('/users/:id/delete', isAuthenticated, isAdmin, permanentlyDeleteUser);
 
 // Add a test endpoint to verify token authentication
 router.get('/test-auth', isAuthenticated, isAdmin, (req, res) => {
@@ -134,7 +136,22 @@ router.put('/users-jwt/:id/activate', verifyJWT, async (req, res) => {
   }
 });
 
+// Fix the permanent delete route to match the pattern used in other routes
+// JWT authenticated routes
+router.get('/users-jwt', verifyJWT, getAllUsers);
+router.get('/users-jwt/:id', verifyJWT, getUserById);
+router.post('/users-jwt', verifyJWT, createUser);
+router.put('/users-jwt/:id', verifyJWT, updateUser);
+router.delete('/users-jwt/:id', verifyJWT, deleteUser);
+router.put('/users-jwt/:id/activate', verifyJWT, activateUser);
+router.delete('/users-jwt/:id/permanent', verifyJWT, permanentlyDeleteUser);
+
+// Make sure the route is registered correctly
+// Password reset link generation
+router.get('/users-jwt/:id/reset-password', verifyJWT, generatePasswordResetLink);
+
 export default router;
+
 
 
 

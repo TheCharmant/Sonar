@@ -12,8 +12,6 @@ import EditUser from "./pages/EditUser/EditUser";
 import Layout from "./components/Layout/Layout";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import "./App.css";
-import EnvDebug from './components/EnvDebug';
-import AuthDebug from './components/AuthDebug';
 import { AuthProvider } from '../src/AuthContext';
 
 function App() {
@@ -40,7 +38,6 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
-      <AuthDebug />
     </AuthProvider>
   );
 }

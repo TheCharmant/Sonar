@@ -213,10 +213,43 @@ input:checked + .slider:before {
   color: #4361ee;
   text-decoration: none;
   font-size: 14px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .action-button:hover {
   text-decoration: underline;
+}
+
+.action-button.delete-button {
+  color: #ef4444;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.action-button.delete-button:hover,
+.action-button.delete-button:active,
+.action-button.delete-button:focus {
+  text-decoration: underline;
+  color: #ef4444;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+/* Override any browser default styles */
+button.action-button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+button.action-button::-moz-focus-inner {
+  border: 0;
 }
 
 /* Remove the error message display and use toast notifications instead */
@@ -327,4 +360,64 @@ input:checked + .slider:before {
 
 .confirm-button.confirm-activate:hover {
   background-color: #2f855a;
+}
+
+/* Add styles for delete button and confirmation dialog */
+.delete-button {
+  color: #e53e3e;
+  border-color: #e53e3e;
+}
+
+.delete-button:hover {
+  background-color: #e53e3e;
+  color: white;
+}
+
+.warning-text {
+  color: #e53e3e;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.confirm-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background-color: white;
+  border-radius: 8px;
+  padding: 24px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.confirm-dialog h3 {
+  margin-top: 0;
+  color: #e53e3e;
+}
+
+.confirm-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.confirm-button.delete-button {
+  background-color: #e53e3e;
+  color: white;
+}
+
+.confirm-button.delete-button:hover {
+  background-color: #c53030;
 }

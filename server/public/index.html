@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="assets/sonar-logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SOÑAR - Email Monitoring Platform</title>
+    <style>
+      :root {
+        --primary: #c066e8;
+        --primary-dark: #9a4bc0;
+        --secondary: #6a3de8;
+        --text-dark: #333;
+        --text-light: #666;
+        --bg-light: #f8f9fa;
+        --white: #ffffff;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        --radius: 12px;
+      }
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        color: var(--text-dark);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow-x: hidden;
+      }
+      
+      .rain-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      
+      .bubble {
+        position: absolute;
+        border-radius: 50%;
+        box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.4),
+                    0 0 10px rgba(192, 102, 232, 0.5);
+        animation: float linear infinite;
+        filter: drop-shadow(0 0 3px rgba(192, 102, 232, 0.3));
+        opacity: 0.7;
+      }
+      
+      .bubble.pink {
+        background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 60%),
+                    radial-gradient(circle at 65% 65%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 60%),
+                    radial-gradient(circle, rgba(240, 150, 220, 0.2) 0%, rgba(240, 150, 220, 0.8) 100%);
+      }
+      
+      .bubble.violet {
+        background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 60%),
+                    radial-gradient(circle at 65% 65%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 60%),
+                    radial-gradient(circle, rgba(180, 100, 220, 0.2) 0%, rgba(180, 100, 220, 0.8) 100%);
+      }
+      
+      @keyframes float {
+        0% {
+          transform: translateY(100vh);
+          opacity: 0;
+        }
+        5% {
+          opacity: 0.7;
+        }
+        95% {
+          opacity: 0.7;
+        }
+        100% {
+          transform: translateY(-150px);
+          opacity: 0;
+        }
+      }
+      
+      .hero {
+        padding: 6rem 2rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .hero::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(192, 102, 232, 0.05) 0%, rgba(106, 61, 232, 0.03) 50%, transparent 70%);
+        z-index: -1;
+      }
+      
+      .logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+      
+      .logo {
+        width: 80px;
+        height: 80px;
+        margin-right: 1rem;
+      }
+      
+      .logo-text {
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -1px;
+      }
+      
+      .tagline {
+        font-size: 1.5rem;
+        color: var(--text-light);
+        max-width: 600px;
+        margin: 0 auto 3rem;
+        line-height: 1.5;
+      }
+      
+      .features {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-bottom: 4rem;
+        flex-wrap: wrap;
+      }
+      
+      .feature {
+        background: var(--white);
+        padding: 1.5rem;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        max-width: 300px;
+        text-align: left;
+      }
+      
+      .feature-icon {
+        color: var(--primary);
+        margin-bottom: 1rem;
+        width: 40px;
+        height: 40px;
+      }
+      
+      .feature h3 {
+        margin-bottom: 0.5rem;
+        font-size: 1.2rem;
+      }
+      
+      .feature p {
+        color: var(--text-light);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      
+      .portals {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+      }
+      
+      .portal-card {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        width: 280px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-decoration: none;
+        color: var(--text-dark);
+      }
+      
+      .portal-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      }
+      
+      .portal-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        padding: 2rem;
+        text-align: center;
+        color: white;
+      }
+      
+      .portal-icon {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .portal-icon svg {
+        width: 30px;
+        height: 30px;
+      }
+      
+      .portal-body {
+        padding: 1.5rem;
+        text-align: center;
+      }
+      
+      .portal-title {
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+      
+      .portal-desc {
+        color: var(--text-light);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+      }
+      
+      .portal-btn {
+        display: inline-block;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 500;
+        transition: opacity 0.2s;
+      }
+      
+      .portal-btn:hover {
+        opacity: 0.9;
+      }
+      
+      footer {
+        margin-top: auto;
+        padding: 2rem;
+        text-align: center;
+        color: var(--text-light);
+        font-size: 0.9rem;
+      }
+      
+      @media (max-width: 768px) {
+        .hero {
+          padding: 4rem 1.5rem;
+        }
+        
+        .logo {
+          width: 60px;
+          height: 60px;
+        }
+        
+        .logo-text {
+          font-size: 2.5rem;
+        }
+        
+        .tagline {
+          font-size: 1.2rem;
+        }
+        
+        .features {
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        .feature {
+          width: 100%;
+          max-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="rain-container" id="rainContainer"></div>
+    <main class="hero">
+      <div class="logo-container">
+        <img src="assets/sonar-logo.png" alt="SOÑAR Logo" class="logo">
+        <h1 class="logo-text">SOÑAR</h1>
+      </div>
+      
+      <p class="tagline">Email monitoring platform with separate client and admin interfaces for tracking, managing, and reporting on email communications.</p>
+      
+      <div class="features">
+        <div class="feature">
+          <svg class="feature-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          <h3>Email Management</h3>
+          <p>Access and manage your inbox and sent emails through a clean, intuitive interface with Gmail integration.</p>
+        </div>
+        
+        <div class="feature">
+          <svg class="feature-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20v-6M6 20V10M18 20V4"></path>
+          </svg>
+          <h3>Admin Controls</h3>
+          <p>Comprehensive admin panel with inbound/outbound tracking, reporting, audit logs, and user management capabilities.</p>
+        </div>
+        
+        <div class="feature">
+          <svg class="feature-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <h3>Reliable Delivery</h3>
+          <p>Ensure your important messages reach their destination with delivery confirmation and status alerts.</p>
+        </div>
+      </div>
+      
+      <div class="portals">
+        <a href="http://localhost:5173" class="portal-card">
+          <div class="portal-header">
+            <div class="portal-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="portal-body">
+            <h3 class="portal-title">Client Portal</h3>
+            <p class="portal-desc">Access your email monitoring dashboard, analytics, and communication history.</p>
+            <div class="portal-btn">Launch Portal</div>
+          </div>
+        </a>
+        
+        <a href="http://localhost:5174" class="portal-card">
+          <div class="portal-header">
+            <div class="portal-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="portal-body">
+            <h3 class="portal-title">Admin Portal</h3>
+            <p class="portal-desc">Manage system settings, user accounts, and advanced monitoring configurations.</p>
+            <div class="portal-btn">Launch Portal</div>
+          </div>
+        </a>
+      </div>
+    </main>
+    
+    <footer>
+      <p>&copy; 2025 SOÑAR Email Monitoring Platform. All rights reserved.</p>
+    </footer>
+  </body>
+</html>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const bubbleContainer = document.getElementById('rainContainer');
+    const bubblesCount = 15; // Reduced count for less crowding
+    
+    function createBubble() {
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble');
+      
+      // Randomly choose between pink and violet
+      if (Math.random() > 0.5) {
+        bubble.classList.add('pink');
+      } else {
+        bubble.classList.add('violet');
+      }
+      
+      // Much more varied sizes - from very small to very large
+      const size = Math.random() * 80 + 20; // 20px to 100px
+      bubble.style.width = `${size}px`;
+      bubble.style.height = `${size}px`;
+      
+      // Distribute across the width of the screen
+      const startX = Math.random() * window.innerWidth;
+      const endX = startX + (Math.random() * 100 - 50); // Slight drift
+      
+      // Much slower movement
+      const duration = Math.random() * 10 + 15; // 15-25 seconds
+      
+      bubble.style.setProperty('--start-x', `${startX}px`);
+      bubble.style.setProperty('--end-x', `${endX}px`);
+      bubble.style.setProperty('--scale', '1');
+      bubble.style.animationDuration = `${duration}s`;
+      
+      // Remove the bubble after animation completes
+      bubble.addEventListener('animationend', function() {
+        this.remove();
+      });
+      
+      bubbleContainer.appendChild(bubble);
+    }
+    
+    // Initial creation - fewer bubbles
+    for (let i = 0; i < bubblesCount; i++) {
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble');
+      
+      // Randomly choose between pink and violet
+      if (Math.random() > 0.5) {
+        bubble.classList.add('pink');
+      } else {
+        bubble.classList.add('violet');
+      }
+      
+      // Much more varied sizes
+      const size = Math.random() * 80 + 20; // 20px to 100px
+      bubble.style.width = `${size}px`;
+      bubble.style.height = `${size}px`;
+      
+      const posX = Math.random() * window.innerWidth;
+      const posY = Math.random() * window.innerHeight;
+      const endX = posX + (Math.random() * 100 - 50); // Slight drift
+      
+      // Much slower movement
+      const duration = Math.random() * 10 + 15; // 15-25 seconds
+      
+      bubble.style.left = `${posX}px`;
+      bubble.style.top = `${posY}px`;
+      bubble.style.setProperty('--start-x', `${posX}px`);
+      bubble.style.setProperty('--end-x', `${endX}px`);
+      bubble.style.setProperty('--scale', '1');
+      bubble.style.animationDuration = `${duration}s`;
+      bubble.style.animationDelay = `${Math.random() * duration}s`;
+      
+      bubbleContainer.appendChild(bubble);
+    }
+    
+    // Create new bubbles less frequently
+    setInterval(createBubble, 3000); // One new bubble every 3 seconds
+    
+    // Adjust on window resize
+    window.addEventListener('resize', function() {
+      bubbleContainer.innerHTML = '';
+      
+      for (let i = 0; i < bubblesCount; i++) {
+        const bubble = document.createElement('div');
+        bubble.classList.add('bubble');
+        
+        // Randomly choose between pink and violet
+        if (Math.random() > 0.5) {
+          bubble.classList.add('pink');
+        } else {
+          bubble.classList.add('violet');
+        }
+        
+        // Much more varied sizes
+        const size = Math.random() * 80 + 20; // 20px to 100px
+        bubble.style.width = `${size}px`;
+        bubble.style.height = `${size}px`;
+        
+        const posX = Math.random() * window.innerWidth;
+        const posY = Math.random() * window.innerHeight;
+        const endX = posX + (Math.random() * 100 - 50); // Slight drift
+        
+        // Much slower movement
+        const duration = Math.random() * 10 + 15; // 15-25 seconds
+        
+        bubble.style.left = `${posX}px`;
+        bubble.style.top = `${posY}px`;
+        bubble.style.setProperty('--start-x', `${posX}px`);
+        bubble.style.setProperty('--end-x', `${endX}px`);
+        bubble.style.setProperty('--scale', '1');
+        bubble.style.animationDuration = `${duration}s`;
+        bubble.style.animationDelay = `${Math.random() * duration}s`;
+        
+        bubbleContainer.appendChild(bubble);
+      }
+    });
+  });
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

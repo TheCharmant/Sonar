@@ -9,9 +9,15 @@ import adminRoutes from "./routes/adminRoutes.js";
 import auditLogRoutes from "./routes/auditlogRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import jwt from 'jsonwebtoken';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -57,6 +63,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/email', emailRoutes);
@@ -73,17 +82,7 @@ app.use((req, res, next) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({
-    message: 'API is running',
-    version: process.env.npm_package_version || '1.0.0',
-    endpoints: {
-      auth: '/api/auth',
-      email: '/api/email',
-      admin: '/api/admin',
-      users: '/api/user',
-      auditlogs: '/api/auditlogs'
-    }
-  });
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Health check endpoint
