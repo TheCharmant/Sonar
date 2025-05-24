@@ -84,7 +84,7 @@ const Layout = () => {
       {/* Fixed Violet Header */}
       <div className="app-header">
         <h1 className="app-logo">
-          <span className="app-logo-icon">🌙</span>
+          <img src="/src/assets/sonar-logo.png" alt="SOÑAR" className="app-logo-icon" />
           <strong>SOÑAR</strong>
         </h1>
         <div className="top-nav-actions">

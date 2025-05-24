@@ -434,7 +434,6 @@ const OutboundMails = () => {
             <div className="filter-group">
               <label>Recipient Email</label>
               <div className="search-container">
-                <Search size={16} className="search-icon" />
                 <input
                   type="text"
                   placeholder="Filter by recipient..."
@@ -448,7 +447,6 @@ const OutboundMails = () => {
             <div className="filter-group">
               <label>Subject Keywords</label>
               <div className="search-container">
-                <Search size={16} className="search-icon" />
                 <input
                   type="text"
                   placeholder="Filter by subject..."

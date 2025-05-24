@@ -798,6 +798,42 @@ const EmailList = ({ folder, onSelectEmail, onError, searchTerm = "" }: EmailLis
            email.snippet.toLowerCase().includes(term);
   });
 
+  // Add this function to handle refresh
+  const refreshEmails = async () => {
+    setLoading(true);
+    setEmails([]);
+    setError("");
+    
+    try {
+      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/email/fetch`);
+      url.searchParams.set("folder", folder.toUpperCase());
+      
+      const selectedLabel = new URLSearchParams(window.location.search).get('label');
+      if (selectedLabel) {
+        url.searchParams.set("label", selectedLabel);
+      }
+
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to refresh emails");
+      }
+
+      const data = await res.json();
+      setEmails(data.emails);
+      setNextPageToken(data.nextPageToken || null);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to refresh emails";
+      setError(errorMsg);
+      if (onError) onError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="email-list-container">
       {/* Email List Header */}
@@ -806,19 +842,9 @@ const EmailList = ({ folder, onSelectEmail, onError, searchTerm = "" }: EmailLis
           <div className="checkbox-header">
             <input type="checkbox" />
           </div>
-          <button className="refresh-button" onClick={() => window.location.reload()}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 4v6h-6"></path>
-              <path d="M1 20v-6h6"></path>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-              <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
-          </button>
-          <button className="more-options-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="1"></circle>
-              <circle cx="19" cy="12" r="1"></circle>
-              <circle cx="5" cy="12" r="1"></circle>
+          <button className="refresh-button" onClick={refreshEmails} title="Refresh emails">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4285F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="refresh-icon">
+              <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
             </svg>
           </button>
         </div>

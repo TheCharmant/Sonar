@@ -42,10 +42,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--primary-purple);
 }
 
-.refresh-button:hover, .more-options-button:hover {
-  background-color: #f3f4f6;
+.refresh-button {
+  background: none !important;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.refresh-button:hover, .refresh-button:focus, .refresh-button:active {
+  background: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.refresh-icon {
+  color: #4285F4; /* Google blue color */
+  transition: transform 0.3s ease;
+}
+
+.refresh-button:hover .refresh-icon {
+  transform: rotate(180deg);
 }
 
 .header-controls {
@@ -413,6 +442,12 @@
 .star-button:hover svg {
   fill: #f59e0b;
 }
+
+
+
+
+
+
 
 
 

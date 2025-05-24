@@ -86,7 +86,29 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px; /* Reduced margin to align better with table */
+  padding: 0 1px; /* Add slight padding to align with table edges */
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.refresh-button {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refresh-button:hover {
+  background: #e5e5e5;
 }
 
 .page-title {
@@ -99,6 +121,7 @@
 .search-container {
   position: relative;
   width: 300px;
+  margin-right: 0; /* Remove any right margin */
 }
 
 .search-icon {
@@ -117,6 +140,7 @@
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
+  background-color: #f8f8f8; /* Match with table background */
 }
 
 .search-input:focus {

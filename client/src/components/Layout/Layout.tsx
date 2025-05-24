@@ -2,8 +2,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import "./Layout.css";
-// Import icons
-import { FiGrid, FiInbox, FiSend } from "react-icons/fi";
+// Replace the icon imports
 import { LogOut } from "react-feather";
 
 const Layout = () => {
@@ -93,8 +92,8 @@ const Layout = () => {
       {/* Fixed Header */}
       <div className="app-header">
         <h1 className="app-logo">
-          <span className="app-logo-icon">🌙</span>
-        SOÑAR
+          <img src="/src/assets/sonar-logo.png" alt="SOÑAR" className="app-logo-icon" />
+          SOÑAR
         </h1>
         <div className="top-nav-actions">
           <button onClick={handleLogout} className="logout-button">
@@ -105,25 +104,36 @@ const Layout = () => {
       </div>
       
       <div className="dashboard-layout">
-        {/* Sidebar Navigation */}
+        {/* Sidebar Navigation with updated icons */}
         <div className="sidebar">
           <nav className="sidebar-nav">
             <ul>
               <li className={path === '/dashboard' ? 'active' : ''}>
                 <div onClick={navigateToDashboard}>
-                  <FiGrid size={20} className="nav-icon" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                  </svg>
                   Dashboard
                 </div>
               </li>
               <li className={path === '/inbox' ? 'active' : ''}>
                 <div onClick={navigateToInbox}>
-                  <FiInbox size={20} className="nav-icon" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12h-6l-2 3h-4l-2-3H2"></path>
+                    <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+                  </svg>
                   Inbox
                 </div>
               </li>
               <li className={path === '/sentbox' ? 'active' : ''}>
                 <div onClick={navigateToSentbox}>
-                  <FiSend size={20} className="nav-icon" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
                   Sent
                 </div>
               </li>
@@ -152,6 +162,10 @@ const Layout = () => {
 };
 
 export default Layout;
+
+
+
+
 
 
 

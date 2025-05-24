@@ -434,7 +434,6 @@ const InboundMails = () => {
             <div className="filter-group">
               <label>Sender Email</label>
               <div className="search-container">
-                <Search size={16} className="search-icon" />
                 <input
                   type="text"
                   placeholder="Filter by sender..."
@@ -448,7 +447,6 @@ const InboundMails = () => {
             <div className="filter-group">
               <label>Subject Keywords</label>
               <div className="search-container">
-                <Search size={16} className="search-icon" />
                 <input
                   type="text"
                   placeholder="Filter by subject..."

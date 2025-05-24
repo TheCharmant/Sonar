@@ -124,36 +124,14 @@ const Login = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <div className="auth-tabs">
-          <Link to="/signup" className="auth-tab">
-            Sign up
-          </Link>
-          <Link to="/login" className="auth-tab active">
-            Log in
-          </Link>
-        </div>
-
         <div className="auth-form-container">
-          <h2>Log In</h2>
+          <h2>Hi Admin! Login to <span className="brand-name">Soñar</span></h2>
           
-          {loginError && (
-            <div className="error-message">
-              {loginError}
-            </div>
-          )}
-
-          {deactivatedError && (
-            <div className="deactivated-error">
-              <AlertCircle size={18} />
-              <span>Your account has been deactivated. Please contact an administrator.</span>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Email</label>
               <div className="input-with-icon">
-                <Mail size={18} />
+                <Mail size={16} />
                 <input
                   type="email"
                   name="email"
@@ -168,7 +146,7 @@ const Login = () => {
             <div className="form-group">
               <label>Password</label>
               <div className="input-with-icon">
-                <Lock size={18} />
+                <Lock size={16} />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -177,7 +155,15 @@ const Login = () => {
                   onChange={handleChange}
                   required
                 />
-                <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
+                <button 
+                  type="button" 
+                  className="password-toggle" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPassword(!showPassword);
+                  }}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
@@ -195,10 +181,6 @@ const Login = () => {
                 <span className="custom-checkbox"></span>
                 Remember me
               </label>
-
-              <Link to="/forgot-password" className="forgot-password">
-                Forgot password?
-              </Link>
             </div>
 
             <button 
@@ -215,6 +197,14 @@ const Login = () => {
                 "Log me in"
               )}
             </button>
+            
+            {loginError && (
+              <p className="simple-error-text">{loginError}</p>
+            )}
+
+            {deactivatedError && (
+              <p className="simple-error-text">Your account has been deactivated. Please contact an administrator.</p>
+            )}
           </form>
         </div>
       </div>

@@ -65,6 +65,7 @@
   top: 50%;
   transform: translateY(-50%);
   color: #777;
+  z-index: 1;
 }
 
 .search-input {
@@ -73,6 +74,27 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  padding-right: 35px;
+}
+
+/* Add clear button styling */
+.clear-input-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #777;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.clear-input-btn:hover {
+  color: #333;
 }
 
 .filter-button, .refresh-btn {
