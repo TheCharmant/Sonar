@@ -1,4 +1,6 @@
 <img width="1897" height="1026" alt="Screenshot 2025-08-02 135811" src="https://github.com/user-attachments/assets/61f1b575-00df-4f2e-a1c0-bde008369106" />
+<img width="1896" height="1025" alt="Screenshot 2025-08-02 135827" src="https://github.com/user-attachments/assets/1be80b83-192a-4716-8f31-7f83b2ef598d" />
+<img width="1900" height="1025" alt="Screenshot 2025-08-02 135846" src="https://github.com/user-attachments/assets/4adc1d94-d739-4a34-a46c-b5fc23470714" />
 
 # Full-Stack Application
 
