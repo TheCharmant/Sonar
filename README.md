@@ -1,3 +1,5 @@
+<img width="1897" height="1026" alt="Screenshot 2025-08-02 135811" src="https://github.com/user-attachments/assets/61f1b575-00df-4f2e-a1c0-bde008369106" />
+
 # Full-Stack Application
 
 This is a full-stack application consisting of three main components:
